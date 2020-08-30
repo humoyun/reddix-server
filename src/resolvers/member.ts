@@ -86,8 +86,21 @@ export class MemberResolver {
     try {
       await ctx.db.persistAndFlush(member)
     } catch (err) {
-      console.error(err)
+      console.log("member : ", member)
+      console.error("err detail: ", err.detail)
+      console.error("typeof err.code: ", typeof err.code)
+      // UniqueConstraintViolationException => detail: 'Key (username)=(...) already exists.',
+      if (Number(err.code) === 23505) {
+        return {
+          errors: [{
+            field: "username",
+            message: "this username already exist"
+          }]
+        }
+      }
     }
+
+    ctx.req.session!.memberId = member.id;
 
     return {member}
   }
