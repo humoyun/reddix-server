@@ -1,0 +1,1 @@
+export const IS_PROD = process.env.environment === "production"
