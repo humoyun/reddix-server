@@ -1,10 +1,15 @@
+// required to make the type reflection work
+import "reflect-metadata";
+
 import { MikroORM } from '@mikro-orm/core';
 import { ApolloServer } from 'apollo-server-express';
 import { buildSchema } from 'type-graphql';
 import express from 'express';
+import dotenv from 'dotenv'
 
 import redis from 'redis';
 import session from 'express-session';
+import cors from 'cors'
 
 import mikroORMConfig from './mikro-orm.config';
 import { PostResolver } from './resolvers/post';
@@ -13,15 +18,22 @@ import { MemberResolver } from './resolvers/member';
 import connectRedis from 'connect-redis';
 import { IS_PROD } from './constants';
 
+dotenv.config();
+
 const main = async () => {
   const PORT = 4400;
   
   const orm = await MikroORM.init(mikroORMConfig)
-  // await orm.getMigrator().up()
+  await orm.getMigrator().up()
   
   const app = express();
   const RedisStore = connectRedis(session)
   const redisClient = redis.createClient()
+
+  app.use(cors({
+    origin: "http://localhost:3000",
+    credentials: true
+  }));
 
   app.use(
     session({
@@ -36,6 +48,7 @@ const main = async () => {
         secure: IS_PROD, // if true works only in https
         sameSite: true // csrf
       },
+      saveUninitialized: false, // 
       secret: process.env.SECRET_KEY as string,
       resave: false,
     })
@@ -49,7 +62,8 @@ const main = async () => {
     context: ({req, res}) => ({ db: orm.em, req, res })
   })
 
-  apollo.applyMiddleware({ app })
+  // defaulsts to cors: { origin: "*" }
+  apollo.applyMiddleware({ app, cors: false });
 
   app.listen(PORT, ()=> {
     console.log(`Server started at port: ${PORT}`)

@@ -12,10 +12,6 @@ export class Member {
   @Property({ unique: true })
   username!: string
 
-  @Field()
-  @Property({ unique: true })
-  email!: string
-
   // no need for field prop to hide it, not to return
   @Property({ type: 'text' })
   password!: string

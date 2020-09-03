@@ -1,5 +1,6 @@
 import { Entity, PrimaryKey, Property } from "@mikro-orm/core";
 import { ObjectType, Field, Int } from "type-graphql";
+// import { Comment } from './Comment'
 
 @ObjectType()
 @Entity()
@@ -8,13 +9,17 @@ export class Post {
   @PrimaryKey()
   id!: number;
  
-  @Field()  
+  @Field()
   @Property({ type: 'text' })
   title!: string;
 
   @Field(() => String)
-  @Property({ type: 'date'})
+  @Property({ type: 'date' })
   createdAt = new Date();
+
+  // @Field(() => [Comment])
+  // @Property({  type: Array })
+  // comments: Comment[];
 
   @Field(() => String)
   @Property({ type: 'date', onUpdate: () => new Date() })

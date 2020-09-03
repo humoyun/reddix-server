@@ -1,14 +1,11 @@
 import { Resolver, Query, Ctx, Arg, Int  } from "type-graphql";
-import { Post } from "../entities/Post";
+import { Comment } from "../entities/Comment";
 import { MyContext } from '../types'
 
 @Resolver()
 export class CommentResolver {
-  @Query(() => [Post])
-  async posts(
-      @Ctx() ctx: MyContext
-    ) {
-
-    return await ctx.db.find(Post, {})
+  @Query(() => [Comment])
+  async comments(@Ctx() ctx: MyContext) {
+    return await ctx.db.find(Comment, {});
   }
 }
