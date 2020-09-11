@@ -2,6 +2,8 @@ import { Resolver, Query, Mutation, Ctx, Arg, Int  } from "type-graphql";
 import { Post } from "../entities/Post";
 import { MyContext } from '../types'
 
+const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+
 @Resolver()
 export class PostResolver {
   @Query(() => [Post])
@@ -70,7 +72,7 @@ export class PostResolver {
       @Ctx() ctx: MyContext
     ): Promise<boolean> {
       try {
-        ctx.db.nativeDelete(Post, { id })    
+        await ctx.db.nativeDelete(Post, { id })    
       } catch (err) {
         console.error(err)
       }

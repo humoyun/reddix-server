@@ -14,6 +14,8 @@ import {
 import { Member } from "../entities/Member";
 import { MyContext } from '../types'
 import argon2 from 'argon2'
+import { EntityManager } from '@mikro-orm/postgresql'
+import { COOKIE_NAME } from "../constants";
 
 /**
  * ArgsType can be used also
@@ -101,7 +103,7 @@ export class MemberResolver {
   }
 
   /**
-   *  
+   *
    * @param title
    * @param ctx
    */
@@ -110,12 +112,12 @@ export class MemberResolver {
     @Arg("args") args: UserInput,
     @Ctx() ctx: MyContext
   ): Promise<UserResponse> {
-    if (!args.username || args.username.length < 2) {
+    if (!args.username || args.username.length < 4) {
       return {
         errors: [
           {
             field: "username",
-            message: "length should be greater than 2",
+            message: "length should be greater than 4",
           },
         ],
       };
@@ -133,25 +135,35 @@ export class MemberResolver {
     }
 
     const hashedPsw = await argon2.hash(args.password);
-    const member = ctx.db.create(Member, {
-      username: args.username,
-      password: hashedPsw,
-    });
-
+    // const member = ctx.db.create(Member, {
+    //   username: args.username,
+    //   password: hashedPsw,
+    // });
+    let member;
     try {
-      const rs = await ctx.db.persistAndFlush(member);
-      console.log("result ", rs);
+      const resp = await (ctx.db as EntityManager)
+        .createQueryBuilder(Member)
+        .getKnexQuery()
+        .insert({
+          username: args.username,
+          password: hashedPsw,
+          created_at: new Date(),
+          updated_at: new Date()
+        })
+        .returning("*");
+      [member] = resp;
+
+      console.log("register persistAndFlush result ", resp);
     } catch (err) {
-      console.log("member : ", member);
       console.error("err detail: ", err.detail);
-      console.error("typeof err.code: ", typeof err.code);
-      // UniqueConstraintViolationException => detail: 'Key (username)=(...) already exists.',
-      if (Number(err.code) === 23505) {
+      // UniqueConstraintViolationException => 
+      // detail: 'Key (username)=(...) already exists.',
+      if (err.detail.includes("already exist")) {
         return {
           errors: [
             {
               field: "username",
-              message: "this username already exist",
+              message: "this username already exists",
             },
           ],
         };
@@ -199,5 +211,20 @@ export class MemberResolver {
     return {
       member,
     };
+  }
+
+  @Mutation(() => Boolean)
+  async logout(
+    @Ctx() ctx: MyContext) {
+    return new Promise(resolve => ctx.req.session?.destroy(err => {
+      ctx.res.clearCookie(COOKIE_NAME);
+      if (err) {
+        console.log("err in logout ", err)
+        resolve(false)
+        return
+      }
+
+      resolve(true)
+    }));
   }
 }
