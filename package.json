@@ -20,10 +20,6 @@
   "author": "Humoyun Ahmad",
   "license": "MIT",
   "dependencies": {
-    "@mikro-orm/cli": "^4.0.0-alpha.0",
-    "@mikro-orm/core": "^4.0.0-alpha.0",
-    "@mikro-orm/migrations": "^4.0.0-alpha.0",
-    "@mikro-orm/postgresql": "^4.0.0-alpha.0",
     "@types/cors": "^2.8.7",
     "apollo-server-express": "^2.17.0",
     "argon2": "^0.27.0",
@@ -33,26 +29,26 @@
     "express": "^4.17.1",
     "express-session": "^1.17.1",
     "graphql": "^15.3.0",
+    "ioredis": "^4.17.3",
+    "nodemailer": "^6.4.11",
     "nodemon": "^2.0.4",
     "pg": "^8.3.3",
     "redis": "^3.0.2",
     "reflect-metadata": "^0.1.13",
     "ts-node": "^9.0.0",
-    "type-graphql": "^1.0.0"
+    "type-graphql": "^1.0.0",
+    "typeorm": "^0.2.26",
+    "uuid": "^8.3.0"
   },
   "devDependencies": {
     "@types/connect-redis": "0.0.14",
     "@types/express": "^4.17.7",
     "@types/express-session": "^1.17.0",
+    "@types/ioredis": "^4.17.4",
     "@types/node": "^14.6.2",
+    "@types/nodemailer": "^6.4.0",
     "@types/redis": "^2.8.26",
+    "@types/uuid": "^8.3.0",
     "typescript": "^4.0.2"
-  },
-  "mikro-orm": {
-    "useTsNode": true,
-    "configPaths": [
-      "./src/mikro-orm.config.ts",
-      "./dist/mikro-orm.config.js"
-    ]
   }
 }

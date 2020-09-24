@@ -1,82 +1,90 @@
-import { Resolver, Query, Mutation, Ctx, Arg, Int  } from "type-graphql";
+import {
+  Resolver,
+  Query,
+  Mutation,
+  Ctx,
+  Arg,
+  Int,
+  UseMiddleware,
+  InputType,
+  Field,
+} from "type-graphql";
 import { Post } from "../entities/Post";
 import { MyContext } from '../types'
+import { isAuth } from "../middlewares/isAuth";
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+
+@InputType()
+class PostInput {
+  @Field()
+  title: string;
+  @Field()
+  text: string;
+}
 
 @Resolver()
 export class PostResolver {
   @Query(() => [Post])
-  async posts(
-      @Ctx() ctx: MyContext
-    ) {
-
-    return await ctx.db.find(Post, {})
+  posts(): Promise<Post[]> {
+    return Post.find();
   }
 
+  /* `() => Int` it can be omitted un this case, but just for demonstration */
   @Query(() => Post, { nullable: true })
-  async post(
-      /* `() => Int` it can be omitted un this case, but just for demonstration */
-      @Arg("id", () => Int) id: number,
-      @Ctx() ctx: MyContext
-    ): Promise<Post | null> {
-
-    return await ctx.db.findOne(Post, {id})
+  async post(@Arg("id", () => Int) id: number): Promise<Post | null> {
+    return Post.find(id);
   }
 
   /**
-   * 
-   * @param title 
-   * @param ctx 
+   *
+   * @param title
+   * @param ctx
    */
   @Mutation(() => Post)
+  @UseMiddleware(isAuth)
   async createPost(
-      @Arg("title") title: string,
-      @Ctx() ctx: MyContext
-    ): Promise<Post> {
-    const post = ctx.db.create(Post, { title })
-    await ctx.db.persistAndFlush(post)
-
-    return post
+    @Arg("input") input: PostInput,
+    @Ctx() ctx: MyContext
+  ): Promise<Post> {
+    return Post.create({
+      ...input,
+      creatorId: ctx.req.session.memberId,
+    }).save();
   }
 
   /**
-   * 
-   * @param id 
-   * @param title 
-   * @param ctx 
+   *
+   * @param id
+   * @param title
    */
   @Mutation(() => Post, { nullable: true })
   async updatePost(
-      @Arg("id") id: number,
-      @Arg("title") title: string,
-      @Ctx() ctx: MyContext
-    ): Promise<Post | null> {
-    const post = await ctx.db.findOne(Post, {id})
-
+    @Arg("id") id: number,
+    @Arg("title", { nullable: true }) title: string
+  ): Promise<Post | null> {
+    let post = await Post.findOne(id);
+    
     if (!post) {
-      return null
-    }
-    if (title) {
-      post.title = title;
-      await ctx.db.persistAndFlush(post)     
+      return null;
     }
 
-    return post
+    if (title) {
+      await Post.update({ id }, { title });
+    }
+    // post title is old not udpated one,  so I am hacking little  bit, should find better way
+    return { ...post, title };
   }
 
-
   @Mutation(() => Boolean)
-  async deletePost(
-      @Arg("id") id: number,
-      @Ctx() ctx: MyContext
-    ): Promise<boolean> {
-      try {
-        await ctx.db.nativeDelete(Post, { id })    
-      } catch (err) {
-        console.error(err)
-      }
-    
-    return true
+  async deletePost(@Arg("id") id: number): Promise<boolean> {
+    try {
+      await Post.delete(id)
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
+
+    return true;
   }
 }

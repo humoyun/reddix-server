@@ -1,8 +1,9 @@
-import { EntityManager, Connection, IDatabaseDriver } from "@mikro-orm/core"
 import { Request, Response } from 'express'
+import { InputType, Field } from "type-graphql";
+import { Redis } from 'ioredis';
 
 export type MyContext = {
-  db: EntityManager<any> & EntityManager<IDatabaseDriver<Connection>>
+  redis: Redis
   req: Request & { session?: Express.Session }
   res: Response
 }
@@ -10,4 +11,16 @@ export type MyContext = {
 export type NotAuthorizedError = {
   code: Number
   msg: String
+}
+
+@InputType()
+export class UserInput {
+  @Field()
+  username!: string;
+
+  @Field()
+  email!: string;
+
+  @Field()
+  password!: string;
 }

@@ -1,41 +1,54 @@
-import { Entity, PrimaryKey, Property } from "@mikro-orm/core";
-import { ObjectType, Field, Int } from "type-graphql";
+import { ObjectType, Field } from "type-graphql";
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Column,
+  BaseEntity,
+  OneToMany,
+  ManyToMany,
+} from "typeorm";
+import { Post } from "./Post";
+import { Channel } from "./Channel";
 
 @ObjectType()
 @Entity()
-export class Member {
-  @Field(() => Int) // if `Int` not specified somehow type-graphql infers as Float
-  @PrimaryKey()
-  id!: number;
-  
+export class Member extends BaseEntity {
   @Field()
-  @Property({ unique: true })
-  username!: string
+  @PrimaryGeneratedColumn()
+  id!: number;
 
-  // no need for field prop to hide it, not to return
-  @Property({ type: 'text' })
-  password!: string
+  @Field()
+  @Column({ unique: true })
+  username!: string;
+
+  @Field()
+  @Column({ unique: true })
+  email!: string;
+
+  @Column()
+  password!: string;
+
+  @OneToMany(() => Post, (post) => post.creator)
+  posts: Post[];
+
+  // @ManyToMany(() => Channel, (channel) => channel.members)
+    
+  @Field(() => String)
+  @CreateDateColumn()
+  createdAt: Date;
 
   @Field(() => String)
-  @Property({ type: 'date'})
-  createdAt = new Date();
+  @UpdateDateColumn()
+  updatedAt: Date;
 
-  @Field(() => String)
-  @Property({ type: 'date', onUpdate: () => new Date() })
-  updatedAt = new Date();
-
-  // @ManyToOne() // when you provide correct type hint, ORM will read it for you
-  // author!: Author;
-
-  // @ManyToOne(() => Publisher) // or you can specify the entity as class reference or string name
-  // publisher?: Publisher;
-
-  // @ManyToMany() // owning side can be simple as this!
-  // tags = new Collection<BookTag>(this);
-
-  // constructor(title: string, author: Author) {
-  //   this.title = title;
-  //   this.author = author;
-  // }
-
+  static findByName(username: string) {
+    return (
+      this.createQueryBuilder("user")
+        .where("user.username = :username", { username })
+        // .andWhere("user.lastName = :lastName", { lastName })
+        .getMany()
+    );
+  }
 }

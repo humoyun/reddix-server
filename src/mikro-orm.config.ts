@@ -1,7 +1,6 @@
 import { IS_PROD } from "./constants";
 import { Post } from "./entities/Post";
 import { Member } from "./entities/Member";
-import { MikroORM } from '@mikro-orm/core';
 import path from "path";
 
 export default {
@@ -14,5 +13,5 @@ export default {
   type: "postgresql",
   debug: !IS_PROD,
   
-} as Parameters<typeof MikroORM.init>[0]
+}
 

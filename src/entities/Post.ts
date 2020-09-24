@@ -1,40 +1,46 @@
-import { Entity, PrimaryKey, Property } from "@mikro-orm/core";
-import { ObjectType, Field, Int } from "type-graphql";
-// import { Comment } from './Comment'
+import { ObjectType, Field } from "type-graphql";
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  BaseEntity,
+  ManyToOne,
+} from "typeorm";
+import { Member } from "./Member";
 
 @ObjectType()
 @Entity()
-export class Post {
-  @Field(() => Int) // if `Int` not specified somehow type-graphql infers as Float
-  @PrimaryKey()
-  id!: number;
- 
+export class Post extends BaseEntity {
   @Field()
-  @Property({ type: 'text' })
+  @PrimaryGeneratedColumn()
+  id!: number;
+
+  @Field()
+  @Column()
   title!: string;
 
+  @Field()
+  @Column()
+  text!: string;
+
+  @Field()
+  @Column({ type: "int", default: 0 })
+  points!: number;
+
+  @Field()
+  @Column()
+  creatorId: number;
+
+  @ManyToOne(() => Member, (member) => member.posts)
+  creator: Member;
+
   @Field(() => String)
-  @Property({ type: 'date' })
-  createdAt = new Date();
-
-  // @Field(() => [Comment])
-  // @Property({  type: Array })
-  // comments: Comment[];
+  @CreateDateColumn()
+  createdAt: Date;
 
   @Field(() => String)
-  @Property({ type: 'date', onUpdate: () => new Date() })
-  updatedAt = new Date();
-  // @ManyToOne() // when you provide correct type hint, ORM will read it for you
-  // author!: Author;
-
-  // @ManyToOne(() => Publisher) // or you can specify the entity as class reference or string name
-  // publisher?: Publisher;
-
-  // @ManyToMany() // owning side can be simple as this!
-  // tags = new Collection<BookTag>(this);
-
-  // constructor(title: string, author: Author) {
-  //   this.title = title;
-  //   this.author = author;
-  // }
+  @UpdateDateColumn()
+  updatedAt: Date;
 }

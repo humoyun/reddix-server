@@ -11,51 +11,21 @@ import {
   Field,
   Int,
 } from "type-graphql";
+import { getConnection } from "typeorm";
+import { v4 } from "uuid";
+import argon2 from "argon2";
+
 import { Member } from "../entities/Member";
-import { MyContext } from '../types'
-import argon2 from 'argon2'
-import { EntityManager } from '@mikro-orm/postgresql'
+import { MyContext } from '../types';
 import { COOKIE_NAME } from "../constants";
+import { validateReg } from "../utils/validateReg";
+import { FORGET_PASSWORD_PREFIX } from "../constants";
 
 /**
  * ArgsType can be used also
  */
-@InputType()
-class UserInput {
-  @Field()
-  username!: string
-
-  @Field()
-  password!: string
-}
-
-
-/**
- * ArgsType usually used for QUERIES
- */
-
-// @ArgsType()
-// class ArgsTypeName {
-//   @Field((type) => Int, { nullable: true, defaultValue: 0 })
-//   arg1?: number;
-
-//   @Field((type) => Int, { nullable: true })
-//   arg2?: number;
-
-//   @Field({ nullable: true })
-//   arg3?: string;
-
-
-  // helpers - index calculations
-  // get startIndex(): number {
-  //   return this.arg1;
-  // }
-  // get endSome(): number {
-  //   return this.arg1 + this.arg2;
-  // }
-
-// }
-
+import { UserInput } from '../types'
+import { sendEmail } from "../utils/sendEmail";
 
 /**
  * 
@@ -87,19 +57,12 @@ class UserResponse {
 @Resolver()
 export class MemberResolver {
   @Query(() => Member, { nullable: true })
-  async me(
-    // @Args() { arg1, arg2, arg3 }: ArgsTypeName,
-    @Ctx() ctx: MyContext
-  ) {
+  me(@Ctx() ctx: MyContext) {
     if (!ctx.req.session.memberId) {
       return null;
     }
 
-    const member = await ctx.db.findOne(Member, {
-      id: ctx.req.session.memberId,
-    });
-
-    return member;
+    return Member.findOne(ctx.req.session.memberId);
   }
 
   /**
@@ -112,51 +75,29 @@ export class MemberResolver {
     @Arg("args") args: UserInput,
     @Ctx() ctx: MyContext
   ): Promise<UserResponse> {
-    if (!args.username || args.username.length < 4) {
-      return {
-        errors: [
-          {
-            field: "username",
-            message: "length should be greater than 4",
-          },
-        ],
-      };
-    }
-
-    if (!args.password || args.password.length < 4) {
-      return {
-        errors: [
-          {
-            field: "password",
-            message: "length should be greater than 4",
-          },
-        ],
-      };
-    }
+    const errors = validateReg(args);
+    if (errors) return { errors };
 
     const hashedPsw = await argon2.hash(args.password);
-    // const member = ctx.db.create(Member, {
-    //   username: args.username,
-    //   password: hashedPsw,
-    // });
+
     let member;
     try {
-      const resp = await (ctx.db as EntityManager)
-        .createQueryBuilder(Member)
-        .getKnexQuery()
-        .insert({
+      const result = await getConnection()
+        .createQueryBuilder()
+        .insert()
+        .into(Member)
+        .values({
           username: args.username,
+          email: args.email,
           password: hashedPsw,
-          created_at: new Date(),
-          updated_at: new Date()
         })
-        .returning("*");
-      [member] = resp;
-
-      console.log("register persistAndFlush result ", resp);
+        .returning("*")
+        .execute();
+      member = result.raw[0];
+      console.log("register persistAndFlush result ");
     } catch (err) {
       console.error("err detail: ", err.detail);
-      // UniqueConstraintViolationException => 
+      // UniqueConstraintViolationException =>
       // detail: 'Key (username)=(...) already exists.',
       if (err.detail.includes("already exist")) {
         return {
@@ -183,14 +124,27 @@ export class MemberResolver {
    */
   @Mutation(() => UserResponse)
   async login(
-    @Arg("args") args: UserInput,
+    @Arg("usernameOrEmail") usernameOrEmail: string,
+    @Arg("password") password: string,
     @Ctx() ctx: MyContext
   ): Promise<UserResponse> {
-    const member = await ctx.db.findOne(Member, { username: args.username });
+    let option;
+
+    if (usernameOrEmail.includes("@")) {
+      option = { email: usernameOrEmail };
+    } else {
+      option = { username: usernameOrEmail };
+    }
+
+    const member = await Member.findOne(
+      usernameOrEmail.includes("@")
+        ? { where: { email: usernameOrEmail } }
+        : { where: { username: usernameOrEmail } }
+    );
 
     const errors: FieldError = {
-      field: "username",
-      message: "this username doesn't exist",
+      field: "usernameOrEmail",
+      message: "this username or emaiil doesn't exist",
     };
 
     if (!member) {
@@ -198,7 +152,7 @@ export class MemberResolver {
         errors: [errors],
       };
     }
-    const isCorrect = await argon2.verify(member.password, args.password);
+    const isCorrect = await argon2.verify(member.password, password);
     if (!isCorrect) {
       return {
         errors: [errors],
@@ -213,18 +167,115 @@ export class MemberResolver {
     };
   }
 
+  /**
+   * 
+   * @param ctx 
+   */
   @Mutation(() => Boolean)
-  async logout(
-    @Ctx() ctx: MyContext) {
-    return new Promise(resolve => ctx.req.session?.destroy(err => {
-      ctx.res.clearCookie(COOKIE_NAME);
-      if (err) {
-        console.log("err in logout ", err)
-        resolve(false)
-        return
-      }
+  async logout(@Ctx() ctx: MyContext) {
+    return new Promise((resolve) =>
+      ctx.req.session?.destroy((err) => {
+        ctx.res.clearCookie(COOKIE_NAME);
+        if (err) {
+          console.log("err in logout ", err);
+          resolve(false);
+          return;
+        }
 
-      resolve(true)
-    }));
+        resolve(true);
+      })
+    );
+  }
+
+  /**
+   *
+   * @param email
+   * @param param1
+   */
+  @Mutation(() => Boolean)
+  async forgotPassword(
+    @Arg("email") email: string,
+    @Ctx() { redis }: MyContext
+  ) {
+    const member = await Member.findOne({ where: { email } });
+    if (!member) {
+      // the email is not in the db
+      return true;
+    }
+
+    const token = v4();
+    await redis.set(
+      FORGET_PASSWORD_PREFIX + token,
+      member.id,
+      "ex",
+      1000 * 60 * 60 * 24 * 3
+    ); // 3 days
+
+    sendEmail(
+      email,
+      `<a href="http://localhost:4411/change-password/${token}">reset password</a>`
+    );
+
+    return true;
+  }
+
+  /**
+   *
+   * @param token
+   * @param newPassword
+   * @param ctx
+   */
+  @Mutation(() => UserResponse)
+  async changePassword(
+    @Arg("token") token: string,
+    @Arg("newPassword") newPassword: string,
+    @Ctx() { redis, req }: MyContext
+  ): Promise<UserResponse> {
+    if (newPassword.length <= 2) {
+      return {
+        errors: [
+          {
+            field: "newPassword",
+            message: "length must be greater than 2",
+          },
+        ],
+      };
+    }
+
+    const key = FORGET_PASSWORD_PREFIX + token;
+    const memberId = await redis.get(key);
+    if (!memberId) {
+      return {
+        errors: [
+          {
+            field: "token",
+            message: "invalid token, expired or not valid",
+          },
+        ],
+      };
+    }
+
+    const memberIdNum = parseInt(memberId);
+    const member = await Member.findOne(memberIdNum);
+
+    if (!member) {
+      return {
+        errors: [
+          {
+            field: "token",
+            message: "user no longer exists",
+          },
+        ],
+      };
+    }
+    const password = await argon2.hash(newPassword);
+    await Member.update({ id: memberIdNum }, { password });
+
+    await redis.del(key);
+    // log in user after change password
+    req.session.memberId = member.id;
+
+    return { member };
   }
 }
+

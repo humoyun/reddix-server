@@ -1,10 +1,10 @@
-import { Entity, PrimaryKey } from "@mikro-orm/core";
 import { ObjectType, Field } from "type-graphql";
+import { Entity, BaseEntity, Column, PrimaryGeneratedColumn } from "typeorm";
 
-@ObjectType
-@Entity
-export class Comment {
+@ObjectType()
+@Entity()
+export class Comment extends BaseEntity {
   @Field(() => Int)
-  @PrimaryKey()
+  @PrimaryGeneratedColumn()
   id!: number;
 }

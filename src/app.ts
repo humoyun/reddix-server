@@ -1,34 +1,50 @@
 // required to make the type reflection work
 import "reflect-metadata";
 
-import { MikroORM } from '@mikro-orm/core';
 import { ApolloServer } from 'apollo-server-express';
 import { buildSchema } from 'type-graphql';
 import express from 'express';
 import dotenv from 'dotenv'
 
-import redis from 'redis';
+import Redis from "ioredis";
 import session from 'express-session';
 import cors from 'cors'
 
-import mikroORMConfig from './mikro-orm.config';
+import typeORMConfig from './type-orm.config';
 import { PostResolver } from './resolvers/post';
 import { MemberResolver } from './resolvers/member';
 
 import connectRedis from 'connect-redis';
 import { IS_PROD, COOKIE_NAME } from './constants';
+import { sendEmail } from "./utils/sendEmail";
+import { Member } from "./entities/Member";
+import { Post } from "./entities/Post";
+import { createConnection } from 'typeorm'
+
+
 
 dotenv.config();
 
 const main = async () => {
+  // sendEmail("humoyun@3i.ai", "Hellow from Server")
   const PORT = 4400;
   
-  const orm = await MikroORM.init(mikroORMConfig)
-  await orm.getMigrator().up()
+  const orm = await createConnection({
+    type: "postgres",
+    database: "reddir",
+    username: "postgres",
+    password: "postgres",
+    logging: true,
+    synchronize: true,
+    entities: [Member, Post]
+  });
+  
+  // await Member.delete({})
+  // await Post.delete({});
   
   const app = express();
   const RedisStore = connectRedis(session)
-  const redisClient = redis.createClient()
+  const redis = new Redis();
 
   app.use(cors({
     origin: "http://localhost:4411",
@@ -39,7 +55,7 @@ const main = async () => {
     session({
       name: COOKIE_NAME,
       store: new RedisStore({
-        client: redisClient,
+        client: redis,
         ttl: 86400 * 7, // one week
       }),
       cookie: {
@@ -59,7 +75,7 @@ const main = async () => {
       resolvers: [PostResolver, MemberResolver],
       validate: false
     }),
-    context: ({req, res}) => ({ db: orm.em, req, res })
+    context: ({req, res}) => ({ redis, req, res })
   })
 
   // defaulsts to cors: { origin: "*" }
