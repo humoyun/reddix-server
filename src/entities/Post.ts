@@ -25,6 +25,22 @@ export class Post extends BaseEntity {
   @Column()
   text!: string;
 
+  // @Field()
+  // @Column()
+  // type!: string; // image | video | text | poll | link
+
+  // @Field()
+  // @Column()
+  // mediaUrl?: string;
+
+  // @Field()
+  // @Column()
+  // link?: string;
+
+  // @Field()
+  // @Column()
+  // hiddenPosts?: number[]; // I need to think how to design this behavior, user should not see these posts
+
   @Field()
   @Column({ type: "int", default: 0 })
   points!: number;

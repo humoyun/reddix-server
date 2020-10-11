@@ -8,7 +8,7 @@
     "test": "test",
     "start": "node dist/app",
     "dev": "nodemon dist/app",
-    "db:setup": "mikro-orm migration:create"
+    "db:setup": "typeorm migration:create"
   },
   "keywords": [
     "GraphQL",

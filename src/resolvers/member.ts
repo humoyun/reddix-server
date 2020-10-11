@@ -43,7 +43,7 @@ class FieldError {
  * 
  */
 @ObjectType()
-class UserResponse {
+export class UserResponse {
   @Field(() => [FieldError], { nullable: true })
   errors?: [FieldError] 
 
@@ -204,17 +204,18 @@ export class MemberResolver {
     }
 
     const token = v4();
+    const timeout = 1000 * 60 * 60 * 24 * 3 // 3 days
     await redis.set(
       FORGET_PASSWORD_PREFIX + token,
       member.id,
       "ex",
-      1000 * 60 * 60 * 24 * 3
-    ); // 3 days
-
-    sendEmail(
-      email,
-      `<a href="http://localhost:4411/change-password/${token}">reset password</a>`
+      timeout
     );
+    
+    const HOST = "http://localhost:4411";
+    const PATH = "change-password";
+    
+    sendEmail(email, `<a href="${HOST}/${PATH}/${token}">reset password</a>`);
 
     return true;
   }

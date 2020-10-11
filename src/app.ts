@@ -3,30 +3,25 @@ import "reflect-metadata";
 
 import { ApolloServer } from 'apollo-server-express';
 import { buildSchema } from 'type-graphql';
-import express from 'express';
-import dotenv from 'dotenv'
-
-import Redis from "ioredis";
+import { createConnection } from "typeorm";
+import connectRedis from "connect-redis";
 import session from 'express-session';
+import express from 'express';
+import Redis from "ioredis";
+import dotenv from 'dotenv'
 import cors from 'cors'
 
-import typeORMConfig from './type-orm.config';
-import { PostResolver } from './resolvers/post';
 import { MemberResolver } from './resolvers/member';
-
-import connectRedis from 'connect-redis';
 import { IS_PROD, COOKIE_NAME } from './constants';
+import { PostResolver } from './resolvers/post';
+import typeORMConfig from './type-orm.config';
 import { sendEmail } from "./utils/sendEmail";
 import { Member } from "./entities/Member";
 import { Post } from "./entities/Post";
-import { createConnection } from 'typeorm'
-
-
 
 dotenv.config();
 
 const main = async () => {
-  // sendEmail("humoyun@3i.ai", "Hellow from Server")
   const PORT = 4400;
   
   const orm = await createConnection({
@@ -39,6 +34,7 @@ const main = async () => {
     entities: [Member, Post]
   });
   
+  // when you need clean table
   // await Member.delete({})
   // await Post.delete({});
   
@@ -87,7 +83,7 @@ const main = async () => {
 }
 
 /**
- * 
+ * Main entry function
  */
 main().catch(err => {
   console.error(err)
