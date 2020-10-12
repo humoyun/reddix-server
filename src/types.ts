@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'
-import { InputType, Field } from "type-graphql";
+import { InputType, ObjectType, Field } from "type-graphql";
 import { Redis } from 'ioredis';
 
 export type MyContext = {
@@ -23,4 +23,14 @@ export class UserInput {
 
   @Field()
   password!: string;
+}
+
+
+@ObjectType()
+export class FieldError {
+  @Field()
+  field: string
+
+  @Field()
+  message: string
 }

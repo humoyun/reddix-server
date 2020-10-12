@@ -18,6 +18,8 @@ import typeORMConfig from './type-orm.config';
 import { sendEmail } from "./utils/sendEmail";
 import { Member } from "./entities/Member";
 import { Post } from "./entities/Post";
+import path from 'path'
+
 
 dotenv.config();
 
@@ -31,8 +33,12 @@ const main = async () => {
     password: "postgres",
     logging: true,
     synchronize: true,
+    migrations: [path.join(__dirname, "/migrations/*")],
     entities: [Member, Post]
   });
+
+  // when you need to do migrations
+  // await orm.runMigrations()
   
   // when you need clean table
   // await Member.delete({})

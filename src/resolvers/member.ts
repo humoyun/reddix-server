@@ -24,20 +24,12 @@ import { FORGET_PASSWORD_PREFIX } from "../constants";
 /**
  * ArgsType can be used also
  */
-import { UserInput } from '../types'
+import { UserInput, FieldError } from '../types'
 import { sendEmail } from "../utils/sendEmail";
 
 /**
  * 
  */
-@ObjectType()
-class FieldError {
-  @Field()
-  field: string
-
-  @Field()
-  message: string
-}
 
 /**
  * 
@@ -93,6 +85,7 @@ export class MemberResolver {
         })
         .returning("*")
         .execute();
+      
       member = result.raw[0];
       console.log("register persistAndFlush result ");
     } catch (err) {

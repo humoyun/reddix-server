@@ -1,0 +1,13 @@
+{
+    "type": "postgres",
+    "host": "localhost",
+    "port": 5432,
+    "username": "postgres",
+    "database": "reddir",
+    "entities": ["entities/*.ts"],
+    "migrationsTableName": "rdr_mgrt_table",
+    "migrations": ["migrations/*.ts"],
+    "cli": {
+        "migrationsDir": "migrations"
+    }
+}
