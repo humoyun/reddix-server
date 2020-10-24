@@ -10,6 +10,7 @@ import {
   Field,
   FieldResolver,
   Root,
+  ObjectType,
 } from "type-graphql";
 import { Post } from "../entities/Post";
 import { MyContext } from '../types'
@@ -18,6 +19,7 @@ import { isAuth } from "../middlewares/isAuth";
 import { FieldError } from '../types'
 import { getConnection } from "typeorm";
 import { limits } from "argon2";
+import { Vote } from "../entities/Vote";
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
@@ -38,31 +40,63 @@ class PostResponse {
   post?: Post
 }
   
+
+@ObjectType()
+class PaginatedPosts { 
+  @Field(() => [Post])
+  posts: Post[]
+
+  @Field()
+  hasMore: boolean
+}
+
 @Resolver(Post)
 export class PostResolver {
   // return only part of content
   @FieldResolver(() => String)
   textSnippet(@Root() root: Post) {
-    return root.text && root.text.slice(0, 50)
+    return root.text && root.text.slice(0, 100)
   }
 
-  @Query(() => [Post])
+  @Query(() => PaginatedPosts)
   async posts(
     @Arg("limit", () => Int) limit: number,
     @Arg("cursor", () => String, { nullable: true }) cursor: string | null
-  ): Promise<Post[]> {
+  ): Promise<PaginatedPosts> {
     const MAX_LIMIT = 50;
-    const maxLimit = Math.min(limit, MAX_LIMIT) 
+    // + 1 is for 
+    const maxLimit = Math.min(limit, MAX_LIMIT) + 1
+    
+    // getConnection().query(`
+    
+    // select p.* from post p
+    // ${cursor ? `` : ""}
+    // `)
+    console.log("----------------------------")
+    
     const qb = getConnection().
       getRepository(Post).
-      createQueryBuilder('post').
-      orderBy('"createdAt"', "DESC"). // should be single quoted becuase of postgres syntax
-      take(maxLimit);
-    if (cursor) {
-      qb.where('"createdAt" < :cursor', {cursor: new Date(parseInt(cursor))})
-    }
+      createQueryBuilder('p'). // alias for post
+      innerJoinAndSelect(
+        "p.creator",
+        "u", // alias
+        'u.id = p."creatorId"' // ' "" ' we have to double quotes because naming restrinctions of postgres, change from camerlCase to underbar then no need for double quotes
+      ).
+      orderBy('p."createdAt"', "DESC"). // should be single quoted becuase of postgres syntax
+      limit(maxLimit); // when take was used with orderBy there was `Cannot read property 'databaseName' of undefined` error
     
-    return qb.getMany();
+    if (cursor) {
+      qb.where('p."createdAt" < :cursor', {cursor: new Date(parseInt(cursor))})
+    }
+
+    
+    const posts = await qb.getMany();
+    console.log("----------------------------")
+
+    return {
+      posts: posts.slice(0, maxLimit - 1),
+      hasMore: posts.length === maxLimit
+    }
   }
 
   /* `() => Int` it can be omitted un this case, but just for demonstration */
@@ -98,6 +132,7 @@ export class PostResolver {
    * @param title
    */
   @Mutation(() => Post, { nullable: true })
+  @UseMiddleware(isAuth) 
   async updatePost(
     @Arg("id") id: number,
     @Arg("title") title: string,
@@ -122,6 +157,7 @@ export class PostResolver {
   }
 
   @Mutation(() => Boolean)
+  @UseMiddleware(isAuth) 
   async deletePost(@Arg("id") id: number): Promise<boolean> {
     try {
       await Post.delete(id);
@@ -129,7 +165,29 @@ export class PostResolver {
       console.error(err);
       return false;
     }
-
+ 
     return true;
+  }
+
+  /**
+   * ---------------------- VOTING 
+   */
+  @Mutation(() => Boolean)
+  @UseMiddleware(isAuth)
+  async vote(
+    @Arg('postId', () => Int) postId: number,
+    @Ctx() {req}: MyContext
+  ) { 
+    const memberId = req.session
+    await Vote.insert({
+      memberId, 
+      postId,
+      val
+    })
+
+    await getConnection().
+      query(`UPDATE post p SET p.points = p.points + $1 WHERE p.id = $2`, [val, postId]);
+
+    return true
   }
 }

@@ -11,6 +11,7 @@ import {
 } from "typeorm";
 import { Post } from "./Post";
 import { Channel } from "./Channel";
+import { Vote } from "./Vote";
 
 @ObjectType()
 @Entity()
@@ -32,6 +33,9 @@ export class Member extends BaseEntity {
 
   @OneToMany(() => Post, (post) => post.creator)
   posts: Post[];
+
+  @OneToMany(() => Vote, (v) => v.post)
+  votes: Vote[]
 
   // @ManyToMany(() => Channel, (channel) => channel.members)
     

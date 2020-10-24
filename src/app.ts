@@ -10,6 +10,7 @@ import express from 'express';
 import Redis from "ioredis";
 import dotenv from 'dotenv'
 import cors from 'cors'
+import path from 'path'
 
 import { MemberResolver } from './resolvers/member';
 import { IS_PROD, COOKIE_NAME } from './constants';
@@ -18,7 +19,7 @@ import typeORMConfig from './type-orm.config';
 import { sendEmail } from "./utils/sendEmail";
 import { Member } from "./entities/Member";
 import { Post } from "./entities/Post";
-import path from 'path'
+import { Vote } from "./entities/Vote";
 
 
 dotenv.config();
@@ -34,7 +35,7 @@ const main = async () => {
     logging: true,
     synchronize: true,
     migrations: [path.join(__dirname, "/migrations/*")],
-    entities: [Member, Post]
+    entities: [Member, Post, Vote]
   });
 
   // when you need to do migrations

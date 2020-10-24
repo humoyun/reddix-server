@@ -7,8 +7,10 @@ import {
   UpdateDateColumn,
   BaseEntity,
   ManyToOne,
+  OneToMany,
 } from "typeorm";
 import { Member } from "./Member";
+import { Vote } from "./Vote";
 
 @ObjectType()
 @Entity()
@@ -24,7 +26,7 @@ export class Post extends BaseEntity {
   @Field()
   @Column()
   text!: string;
-
+ß
   // @Field()
   // @Column()
   // type!: string; // image | video | text | poll | link
@@ -49,8 +51,12 @@ export class Post extends BaseEntity {
   @Column()
   creatorId: number;
 
+  @Field(() => Member)
   @ManyToOne(() => Member, (member) => member.posts)
   creator: Member;
+
+  @OneToMany(() => Vote, (v) => v.post)
+  votes: Vote[]
 
   @Field(() => String)
   @CreateDateColumn()
