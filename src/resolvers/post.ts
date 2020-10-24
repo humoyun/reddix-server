@@ -176,9 +176,24 @@ export class PostResolver {
   @UseMiddleware(isAuth)
   async vote(
     @Arg('postId', () => Int) postId: number,
+    @Arg('val', () => Int) val: number,
     @Ctx() {req}: MyContext
   ) { 
-    const memberId = req.session
+
+    const memberId = req.session.memberId
+    // await getConnection().query(
+    // `
+    //   START TRANSACTION;
+    //   insert into updoot ("memberId", "postId", value)
+    //   values (${memberId},${postId},${realValue});
+    //   update post
+    //   set points = points + ${realValue}
+    //   where id = ${postId};
+    //   COMMIT;
+    // `
+    // );
+    
+   
     await Vote.insert({
       memberId, 
       postId,
@@ -186,7 +201,7 @@ export class PostResolver {
     })
 
     await getConnection().
-      query(`UPDATE post p SET p.points = p.points + $1 WHERE p.id = $2`, [val, postId]);
+      query(`UPDATE post SET points = points + $1 WHERE id = $2`, [val, postId]);
 
     return true
   }
