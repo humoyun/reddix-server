@@ -12,6 +12,7 @@ import {
   Root,
   ObjectType,
 } from "type-graphql";
+import { Vote } from "../entities/Vote";
 import { Post } from "../entities/Post";
 import { MyContext } from '../types'
 import { isAuth } from "../middlewares/isAuth";
@@ -19,7 +20,7 @@ import { isAuth } from "../middlewares/isAuth";
 import { FieldError } from '../types'
 import { getConnection } from "typeorm";
 import { limits } from "argon2";
-import { Vote } from "../entities/Vote";
+
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
@@ -39,7 +40,6 @@ class PostResponse {
   @Field(() => Post, { nullable: true })
   post?: Post
 }
-  
 
 @ObjectType()
 class PaginatedPosts { 
@@ -78,15 +78,15 @@ export class PostResolver {
       getRepository(Post).
       createQueryBuilder('p'). // alias for post
       innerJoinAndSelect(
-        "p.creator",
+        "p.owner",
         "u", // alias
-        'u.id = p."creatorId"' // ' "" ' we have to double quotes because naming restrinctions of postgres, change from camerlCase to underbar then no need for double quotes
+        "u.id = p.owner_id" // ' "" ' we have to double quotes because naming restrinctions of postgres, 
       ).
-      orderBy('p."createdAt"', "DESC"). // should be single quoted becuase of postgres syntax
+      orderBy('p."created_at"', "DESC"). // should be single quoted becuase of postgres syntax
       limit(maxLimit); // when take was used with orderBy there was `Cannot read property 'databaseName' of undefined` error
     
     if (cursor) {
-      qb.where('p."createdAt" < :cursor', {cursor: new Date(parseInt(cursor))})
+      qb.where("p.created_at < :cursor", {cursor: new Date(parseInt(cursor))})
     }
 
     
@@ -102,8 +102,12 @@ export class PostResolver {
   /* `() => Int` it can be omitted un this case, but just for demonstration */
   @Query(() => Post, { nullable: true })
   async post(@Arg("id", () => Int) id: number): Promise<Post | null> {
-    return Post.find(id);
-  }
+
+  const qb = getConnection().
+    getRepository(Post).find(id, { relations: ["categories"] })
+
+    return Post.find(id, { relations: ["flairs"] });
+  } 
 
   /**
    *
@@ -120,9 +124,12 @@ export class PostResolver {
     //   return []
     // }
 
+    // need to check type based on this will create different post
+    // media post (image&video), link extraction post, text post, rich text editor
+
     return Post.create({
       ...input,
-      creatorId: ctx.req.session.memberId,
+      ownerId: ctx.req.session.userId,
     }).save();
   }
 
@@ -170,7 +177,8 @@ export class PostResolver {
   }
 
   /**
-   * ---------------------- VOTING 
+   * ---------------------- VOTING ------------------------
+   * The query runner used by EntityManager. Used only in transactional instances of EntityManager.
    */
   @Mutation(() => Boolean)
   @UseMiddleware(isAuth)
@@ -179,30 +187,60 @@ export class PostResolver {
     @Arg('val', () => Int) val: number,
     @Ctx() {req}: MyContext
   ) { 
+    const userId = req.session.userId
+    const queryRunner = await getConnection().createQueryRunner()  
+    await queryRunner.connect()
+    await queryRunner.startTransaction()
+    try {
+      
+      await queryRunner.query(
+        'INSERT INTO vote (user_id, post_id, val) VALUES ($1, $2, $3);',
+        [userId, postId, val]
+      );
+      await queryRunner.query(
+        'UPDATE post SET points = points + $1 WHERE id = $2;',
+        [val, postId]
+      );
+      
+      await queryRunner.commitTransaction();
 
-    const memberId = req.session.memberId
-    // await getConnection().query(
-    // `
-    //   START TRANSACTION;
-    //   insert into updoot ("memberId", "postId", value)
-    //   values (${memberId},${postId},${realValue});
-    //   update post
-    //   set points = points + ${realValue}
-    //   where id = ${postId};
-    //   COMMIT;
-    // `
-    // );
-    
-   
-    await Vote.insert({
-      memberId, 
-      postId,
-      val
-    })
-
-    await getConnection().
-      query(`UPDATE post SET points = points + $1 WHERE id = $2`, [val, postId]);
+    } catch (err) {
+      console.error(err)
+      // since we have errors let's rollback changes we made
+      await queryRunner.rollbackTransaction();
+      return false;
+    } finally {
+      // you need to release query runner which is manually created:
+      await queryRunner.release();
+    }
 
     return true
   }
+
+  @Mutation(() => Boolean)
+  @UseMiddleware(isAuth)
+  async updateVote(
+    @Arg('postId', () => Int) postId: number,
+    @Arg('val', () => Int) val: number,
+    @Ctx() { req }: MyContext 
+  ) { 
+    const userId = req.session.userId
+    try {
+      // await getConnection()
+      //   .createQueryBuilder()
+      //   .update(Vote)
+      //   .set({ val })
+      //   .where("post_id = :pid AND userId = :mid", { pid: postId, mid: userId })
+      //   .execute();
+
+      // validate just to make sure 
+      const updatedVal = val===0 ? 0 : (val>0?1:-1);
+      await Vote.update({ post_id: postId, user_id: userId }, { val: updatedVal })
+    } catch (err) {
+      console.error(err)
+    }
+
+    return true;
+  }
+  
 }

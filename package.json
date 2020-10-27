@@ -38,6 +38,7 @@
     "ts-node": "^9.0.0",
     "type-graphql": "^1.0.0",
     "typeorm": "^0.2.26",
+    "typeorm-naming-strategies": "^2.0.0",
     "uuid": "^8.3.0"
   },
   "devDependencies": {

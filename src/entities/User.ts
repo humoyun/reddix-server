@@ -10,14 +10,14 @@ import {
   ManyToMany,
 } from "typeorm";
 import { Post } from "./Post";
-import { Channel } from "./Channel";
+import { Subreddir } from "./Subreddir";
 import { Vote } from "./Vote";
 
 @ObjectType()
-@Entity()
-export class Member extends BaseEntity {
+@Entity({ name: "users" })
+export class User extends BaseEntity {
   @Field()
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn("uuid")
   id!: number;
 
   @Field()
@@ -31,14 +31,31 @@ export class Member extends BaseEntity {
   @Column()
   password!: string;
 
-  @OneToMany(() => Post, (post) => post.creator)
+  // relationship with Post
+  @OneToMany(() => Post, (post) => post.owner)
   posts: Post[];
 
+  // relationship with Vote
   @OneToMany(() => Vote, (v) => v.post)
   votes: Vote[]
 
-  // @ManyToMany(() => Channel, (channel) => channel.members)
-    
+  /**
+   * --------------------------------------------
+   * This is for Subreddir ownership relationship
+   */
+  @OneToMany(() => Subreddir, Subreddir => subreddir.owner)
+  mySubreddirs: Subreddir[];
+  // --------------------------------------------
+
+  /** DO NOT CONFUSE WITH ABOVE RELATIONSHIP
+   * ---------------------------------------------
+   * This is for subreddir membership relationship 
+   * bi-rirectional relationship
+   */ 
+  @ManyToMany(() => Subreddir, sbrdr => sbrdr.members)
+  subreddirs: Subreddir[];
+  // ---------------------------------------------
+
   @Field(() => String)
   @CreateDateColumn()
   createdAt: Date;
@@ -46,6 +63,10 @@ export class Member extends BaseEntity {
   @Field(() => String)
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @Field()
+  @Column({ default: false })
+  isActive: boolean;
 
   static findByName(username: string) {
     return (

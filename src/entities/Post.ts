@@ -9,14 +9,31 @@ import {
   ManyToOne,
   OneToMany,
 } from "typeorm";
-import { Member } from "./Member";
+import { User } from "./User";
 import { Vote } from "./Vote";
+import { Flair } from "./Flair";
+
+
+// Options
+
+// @Entity({
+//     name: "users",
+//     engine: "MyISAM",
+//     schema: 'schema_with_best_tables',
+//     synchronize: false,
+//     orderBy: {
+//         name: "ASC",
+//         id: "DESC"
+//     }
+// })
+
+
 
 @ObjectType()
-@Entity()
+@Entity({ name: 'posts' })
 export class Post extends BaseEntity {
   @Field()
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn("uuid")
   id!: number;
 
   @Field()
@@ -26,7 +43,6 @@ export class Post extends BaseEntity {
   @Field()
   @Column()
   text!: string;
-ß
   // @Field()
   // @Column()
   // type!: string; // image | video | text | poll | link
@@ -49,14 +65,30 @@ export class Post extends BaseEntity {
 
   @Field()
   @Column()
-  creatorId: number;
+  ownerId: number;
 
-  @Field(() => Member)
-  @ManyToOne(() => Member, (member) => member.posts)
-  creator: Member;
+  @Field(() => User)
+  @ManyToOne(() => User, (user) => user.posts)
+  owner: User;
 
+  // relationship with Vote
   @OneToMany(() => Vote, (v) => v.post)
   votes: Vote[]
+
+  // Post may have multiple tags
+  // @ManyToMany(type => Post)
+  // @JoinTable({
+  //   name: "post_tags",
+  //   joinColumn: {
+  //       name: "post",
+  //       referencedColumnName: "id"
+  //   },
+  //   inverseJoinColumn: {
+  //       name: "flair",
+  //       referencedColumnName: "id"
+  //   }
+  // })
+  // flairs: Flair[]
 
   @Field(() => String)
   @CreateDateColumn()

@@ -15,7 +15,7 @@ import { getConnection } from "typeorm";
 import { v4 } from "uuid";
 import argon2 from "argon2";
 
-import { Member } from "../entities/Member";
+import { User } from "../entities/User";
 import { MyContext } from '../types';
 import { COOKIE_NAME } from "../constants";
 import { validateReg } from "../utils/validateReg";
@@ -39,22 +39,22 @@ export class UserResponse {
   @Field(() => [FieldError], { nullable: true })
   errors?: [FieldError] 
 
-  @Field(() => Member, { nullable: true })
-  member?: Member
+  @Field(() => User, { nullable: true })
+  user?: User
 }
 
 /**
  * 
  */
 @Resolver()
-export class MemberResolver {
-  @Query(() => Member, { nullable: true })
+export class UserResolver {
+  @Query(() => User, { nullable: true })
   me(@Ctx() ctx: MyContext) {
-    if (!ctx.req.session.memberId) {
+    if (!ctx.req.session.userId) {
       return null;
     }
 
-    return Member.findOne(ctx.req.session.memberId);
+    return User.findOne(ctx.req.session.userId);
   }
 
   /**
@@ -72,12 +72,12 @@ export class MemberResolver {
 
     const hashedPsw = await argon2.hash(args.password);
 
-    let member;
+    let user;
     try {
       const result = await getConnection()
         .createQueryBuilder()
         .insert()
-        .into(Member)
+        .into(User)
         .values({
           username: args.username,
           email: args.email,
@@ -86,7 +86,7 @@ export class MemberResolver {
         .returning("*")
         .execute();
       
-      member = result.raw[0];
+      user = result.raw[0];
       console.log("register persistAndFlush result ");
     } catch (err) {
       console.error("err detail: ", err.detail);
@@ -105,7 +105,7 @@ export class MemberResolver {
     }
 
     return {
-      member,
+      user,
     };
   }
 
@@ -129,7 +129,7 @@ export class MemberResolver {
       option = { username: usernameOrEmail };
     }
 
-    const member = await Member.findOne(
+    const user = await User.findOne(
       usernameOrEmail.includes("@")
         ? { where: { email: usernameOrEmail } }
         : { where: { username: usernameOrEmail } }
@@ -140,12 +140,12 @@ export class MemberResolver {
       message: "this username or emaiil doesn't exist",
     };
 
-    if (!member) {
+    if (!user) {
       return {
         errors: [errors],
       };
     }
-    const isCorrect = await argon2.verify(member.password, password);
+    const isCorrect = await argon2.verify(user.password, password);
     if (!isCorrect) {
       return {
         errors: [errors],
@@ -153,10 +153,10 @@ export class MemberResolver {
     }
 
     // no need for ! mark after session, as we updated type def of Context.Request
-    ctx.req.session.memberId = member.id;
+    ctx.req.session.userId = user.id;
 
     return {
-      member,
+      user,
     };
   }
 
@@ -190,8 +190,8 @@ export class MemberResolver {
     @Arg("email") email: string,
     @Ctx() { redis }: MyContext
   ) {
-    const member = await Member.findOne({ where: { email } });
-    if (!member) {
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
       // the email is not in the db
       return true;
     }
@@ -200,7 +200,7 @@ export class MemberResolver {
     const timeout = 1000 * 60 * 60 * 24 * 3 // 3 days
     await redis.set(
       FORGET_PASSWORD_PREFIX + token,
-      member.id,
+      user.id,
       "ex",
       timeout
     );
@@ -237,8 +237,8 @@ export class MemberResolver {
     }
 
     const key = FORGET_PASSWORD_PREFIX + token;
-    const memberId = await redis.get(key);
-    if (!memberId) {
+    const userId = await redis.get(key);
+    if (!userId) {
       return {
         errors: [
           {
@@ -249,10 +249,10 @@ export class MemberResolver {
       };
     }
 
-    const memberIdNum = parseInt(memberId);
-    const member = await Member.findOne(memberIdNum);
+    const userIdNum = parseInt(userId);
+    const user = await User.findOne(userIdNum);
 
-    if (!member) {
+    if (!user) {
       return {
         errors: [
           {
@@ -263,13 +263,13 @@ export class MemberResolver {
       };
     }
     const password = await argon2.hash(newPassword);
-    await Member.update({ id: memberIdNum }, { password });
+    await User.update({ id: userIdNum }, { password });
 
     await redis.del(key);
     // log in user after change password
-    req.session.memberId = member.id;
+    req.session.userId = user.id;
 
-    return { member };
+    return { user };
   }
 }
 

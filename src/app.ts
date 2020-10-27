@@ -1,6 +1,6 @@
 // required to make the type reflection work
 import "reflect-metadata";
-
+import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { ApolloServer } from 'apollo-server-express';
 import { buildSchema } from 'type-graphql';
 import { createConnection } from "typeorm";
@@ -12,12 +12,12 @@ import dotenv from 'dotenv'
 import cors from 'cors'
 import path from 'path'
 
-import { MemberResolver } from './resolvers/member';
+import { UserResolver } from './resolvers/user';
 import { IS_PROD, COOKIE_NAME } from './constants';
 import { PostResolver } from './resolvers/post';
 import typeORMConfig from './type-orm.config';
 import { sendEmail } from "./utils/sendEmail";
-import { Member } from "./entities/Member";
+import { User } from "./entities/User";
 import { Post } from "./entities/Post";
 import { Vote } from "./entities/Vote";
 
@@ -35,14 +35,15 @@ const main = async () => {
     logging: true,
     synchronize: true,
     migrations: [path.join(__dirname, "/migrations/*")],
-    entities: [Member, Post, Vote]
+    entities: [User, Post, Vote],
+    namingStrategy: new SnakeNamingStrategy()
   });
 
   // when you need to do migrations
   // await orm.runMigrations()
   
   // when you need clean table
-  // await Member.delete({})
+  // await User.delete({})
   // await Post.delete({});
   
   const app = express();
@@ -75,7 +76,7 @@ const main = async () => {
 
   const apollo = new ApolloServer({
     schema: await buildSchema({
-      resolvers: [PostResolver, MemberResolver],
+      resolvers: [PostResolver, UserResolver],
       validate: false
     }),
     context: ({req, res}) => ({ redis, req, res })
