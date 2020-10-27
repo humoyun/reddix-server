@@ -36,7 +36,7 @@ export class Channel extends BaseEntity {
   // ---------------------------------------------
 
   /** DO NOT CONFUSE WITH ABOVE RELATIONSHIP
-   * ---------------------------------------------
+   * ---------------------------------------------  
    * This is for subreddir membership relationship 
    */
   @ManyToMany(() => User)
