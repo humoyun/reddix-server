@@ -5,7 +5,7 @@ import { BaseEntity, CreateDateColumn, PrimaryColumn } from "typeorm";
 export class Seen extends BaseEntity {  
   @Field()
   @PrimaryColumn("uuid")
-  post_id!: string
+  postId!: string
   
   @Field()
   @PrimaryColumn("uuid")

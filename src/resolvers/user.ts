@@ -13,7 +13,6 @@ import {
 } from "type-graphql";
 import { getConnection } from "typeorm";
 import { v4 } from "uuid";
-import argon2 from "argon2";
 
 import { User } from "../entities/User";
 import { MyContext } from '../types';
@@ -70,7 +69,7 @@ export class UserResolver {
     const errors = validateReg(args);
     if (errors) return { errors };
 
-    const hashedPsw = await argon2.hash(args.password);
+    const hashedPsw = await User.getHashedPassword(args.password);
 
     let user;
     try {
@@ -145,7 +144,7 @@ export class UserResolver {
         errors: [errors],
       };
     }
-    const isCorrect = await argon2.verify(user.password, password);
+    const isCorrect = await User.verifyPassword(user.password, password);
     if (!isCorrect) {
       return {
         errors: [errors],
@@ -262,7 +261,7 @@ export class UserResolver {
         ],
       };
     }
-    const password = await argon2.hash(newPassword);
+    const password = await User.getHashedPassword(newPassword);
     await User.update({ id: userIdNum }, { password });
 
     await redis.del(key);

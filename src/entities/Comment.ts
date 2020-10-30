@@ -5,16 +5,20 @@ import { Entity, BaseEntity, Column, PrimaryGeneratedColumn } from "typeorm";
 @Entity()
 export class Comment extends BaseEntity {
   @Field()
-  @PrimaryGeneratedColumn("uuid")
+  @PrimaryGeneratedColumn("increment")
   id!: string;
 
   @Field()
   @Column()
-  parent_id!: string;
+  parentId!: int;
 
   @Field()
   @Column({ type: "uuid" })
-  owner_id: string; 
+  ownerId!: string;
+
+  @Field()
+  @Column({ type: "uuid" })
+  postId!: string;
 
   @Field()
   @Column({ type: "text", nullable: false })

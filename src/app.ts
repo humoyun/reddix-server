@@ -24,6 +24,8 @@ import { Vote } from "./entities/Vote";
 
 dotenv.config();
 
+const ONE_WEEK = 1000 * 3600 * 24 * 7;
+
 const main = async () => {
   const PORT = 4400;
   
@@ -63,7 +65,7 @@ const main = async () => {
         ttl: 86400 * 7, // one week
       }),
       cookie: {
-        maxAge: 1000 * 3600 * 24 * 30, // one month
+        maxAge: ONE_WEEK, // one month
         httpOnly: true, // client cannot access this cookie
         secure: IS_PROD, // if true works only in https
         sameSite: true, // csrf
@@ -86,7 +88,7 @@ const main = async () => {
   apollo.applyMiddleware({ app, cors: false });
 
   app.listen(PORT, ()=> {
-    console.log(`Server started at port: ${PORT}`)
+    console.log(`Reddir Server started at port: ${PORT}`)
   })  
 }
 

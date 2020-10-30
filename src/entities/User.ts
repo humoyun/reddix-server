@@ -1,3 +1,4 @@
+import argon2 from "argon2";
 import { ObjectType, Field } from "type-graphql";
 import {
   Entity,
@@ -9,8 +10,9 @@ import {
   OneToMany,
   ManyToMany,
 } from "typeorm";
+import { IsEmail } from 'class-validator'
 import { Post } from "./Post";
-import { Subreddir } from "./Subreddir";
+import { Subreddir } from "./Subreddix";
 import { Vote } from "./Vote";
 
 @ObjectType()
@@ -25,12 +27,22 @@ export class User extends BaseEntity {
   username!: string;
 
   @Field()
+  @IsEmail()
   @Column({ unique: true })
   email!: string;
+
+  @Field()
+  @Column({ default: false })
+  verified: boolean;
 
   @Column()
   password!: string;
 
+  // @Field()
+  // @Column()
+  // role: string // default: member [can be admin to create subreddir]
+  // in order to be able to create subreddir you need to gather enough points (karmas)
+    
   // relationship with Post
   @OneToMany(() => Post, (post) => post.owner)
   posts: Post[];
@@ -75,5 +87,27 @@ export class User extends BaseEntity {
         // .andWhere("user.lastName = :lastName", { lastName })
         .getMany()
     );
+  }
+
+  static async verifyPassword(real, toCheck): boolean { 
+    let bool: boolean;
+    try {
+      bool = await argon2.verify(real, toCheck)
+    } catch (err) {
+      console.error(err)
+    }
+
+    return bool
+  }
+
+  static async getHashedPassword(plainPsword: string): string {
+    let hashedPsw: string;
+    try {
+      hashedPsw = await argon2.hash(plainPsword);
+    } catch (err) {
+      console.error(err)
+    }
+    
+    return hashedPsw
   }
 }

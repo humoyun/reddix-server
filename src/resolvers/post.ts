@@ -114,7 +114,7 @@ export class PostResolver {
    * @param title
    * @param ctx
    */
-  @Mutation(() => Post)
+  @Mutation(returns => Post)
   @UseMiddleware(isAuth) 
   async createPost(
     @Arg("input") input: PostInput,
