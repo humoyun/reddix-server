@@ -28,6 +28,13 @@ import { Flair } from "./Flair";
 // })
 
 
+enum PostType {
+  IMG = "image",
+  VID = "video",
+  TXT = "text"
+  LNK = "link"
+  PLL = "poll"
+}
 
 @ObjectType()
 @Entity({ name: 'posts' })
@@ -43,9 +50,18 @@ export class Post extends BaseEntity {
   @Field()
   @Column()
   text!: string;
-  // @Field()
-  // @Column()
-  // type!: string; // image | video | text | poll | link
+
+  @Field()
+  @Column({  })
+  html: string;
+  
+  @Field()
+  @Column()
+  flair: string;
+
+  @Field()
+  @Column({ type: "enum", enum: PostType, default: PostType.TXT  })
+  type!: PostType; // image | video | text | poll | link
 
   // @Field()
   // @Column()

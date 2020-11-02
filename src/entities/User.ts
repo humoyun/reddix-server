@@ -12,7 +12,7 @@ import {
 } from "typeorm";
 import { IsEmail } from 'class-validator'
 import { Post } from "./Post";
-import { Subreddir } from "./Subreddix";
+import { Subreddix } from "./Subreddix";
 import { Vote } from "./Vote";
 
 @ObjectType()
@@ -40,8 +40,8 @@ export class User extends BaseEntity {
 
   // @Field()
   // @Column()
-  // role: string // default: member [can be admin to create subreddir]
-  // in order to be able to create subreddir you need to gather enough points (karmas)
+  // role: string // default: member [can be admin to create subreddix]
+  // in order to be able to create subreddix you need to gather enough points (karmas)
     
   // relationship with Post
   @OneToMany(() => Post, (post) => post.owner)
@@ -54,18 +54,30 @@ export class User extends BaseEntity {
   /**
    * --------------------------------------------
    * This is for Subreddir ownership relationship
+   * do not confuse ownSubreddirs with subreddirs (which is for membership)
    */
-  @OneToMany(() => Subreddir, Subreddir => subreddir.owner)
-  mySubreddirs: Subreddir[];
-  // --------------------------------------------
-
-  /** DO NOT CONFUSE WITH ABOVE RELATIONSHIP
+  @OneToMany(() => Subreddix, subreddix => subreddix.owner)
+  mySubreddixes: Subreddix[];
+  /**
    * ---------------------------------------------
-   * This is for subreddir membership relationship 
+   * This is for subreddix membership relationship 
    * bi-rirectional relationship
    */ 
-  @ManyToMany(() => Subreddir, sbrdr => sbrdr.members)
-  subreddirs: Subreddir[];
+  @ManyToMany(() => Subreddix, subreddix => subreddix.members)
+  @JoinTable({
+    name: "user_subreddixes",
+    joinColumn: {
+      name: "users",
+      referencedColumnName: ""
+    },
+    inverseJoinColumn: {
+      name: "subreddix",
+      referencedColumnName: ""
+    },
+  })
+  subreddixes: Subreddix[];
+
+
   // ---------------------------------------------
 
   @Field(() => String)

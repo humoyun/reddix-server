@@ -17,6 +17,8 @@ import { IS_PROD, COOKIE_NAME } from './constants';
 import { PostResolver } from './resolvers/post';
 import typeORMConfig from './type-orm.config';
 import { sendEmail } from "./utils/sendEmail";
+import { Subreddix } from "./entities/Subreddix";
+import { User } from "./entities/User";
 import { User } from "./entities/User";
 import { Post } from "./entities/Post";
 import { Vote } from "./entities/Vote";
