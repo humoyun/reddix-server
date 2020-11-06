@@ -11,7 +11,7 @@ import {
   Field,
   Int,
 } from "type-graphql";
-import { getConnection, getRepository, getCustomRepository } from "typeorm";
+import { getConnection } from "typeorm";
 import { v4 } from "uuid";
 
 import { User } from "../entities/User";
@@ -25,17 +25,10 @@ import { FORGET_PASSWORD_PREFIX } from "../constants";
  */
 import { UserInput, FieldError } from '../types'
 import { sendEmail } from "../utils/sendEmail";
-import { UserRepository } from "../repositories/UserRepository";
-import { query } from "express";
 
-@ObjectType()
-class TokenResponse { 
-  @Field(() => FieldError, { nullable: true })
-  error?: FieldError
-  
-  @Field({nullable: true})
-  success?: Boolean 
-}
+/**
+ * 
+ */
 
 /**
  * 
@@ -54,41 +47,14 @@ export class UserResponse {
  */
 @Resolver()
 export class UserResolver {
-
   @Query(() => User, { nullable: true })
   me(@Ctx() ctx: MyContext) {
     if (!ctx.req.session.userId) {
       return null;
     }
-    
-    const repo = getRepository(User);
-    return repo.findOne(ctx.req.session.userId)
+
+    return User.findOne(ctx.req.session.userId);
   }
-
-  @Query(() => TokenResponse)
-  async checkToken(
-    @Arg("token") token: String,
-    @Ctx() { redis }: MyContext
-  ): TokenResponse {
-    
-    const key = FORGET_PASSWORD_PREFIX + token;
-    const userId = await redis.get(key);
-    
-    if (!userId) {
-      return {
-        error: {
-          field: "token",
-          message: "invalid token, expired or not valid",
-        },
-        success: false;  
-      };
-    }
-
-    return {
-      success: true
-    };
-  }
-
 
   /**
    *
@@ -103,12 +69,26 @@ export class UserResolver {
     const errors = validateReg(args);
     if (errors) return { errors };
 
-    const userRepo = await getCustomRepository(UserRepository);
-    let user: User;
+    const hashedPsw = await User.getHashedPassword(args.password);
+
+    let user;
     try {
-      user = await userRepo.create(args)
+      const result = await getConnection()
+        .createQueryBuilder()
+        .insert()
+        .into(User)
+        .values({
+          username: args.username,
+          email: args.email,
+          password: hashedPsw,
+        })
+        .returning("*")
+        .execute();
+      
+      user = result.raw[0];
+      console.log("register persistAndFlush result ");
     } catch (err) {
-      console.error("err detail: ", err);
+      console.error("err detail: ", err.detail);
       // UniqueConstraintViolationException =>
       // detail: 'Key (username)=(...) already exists.',
       if (err.detail.includes("already exist")) {
@@ -122,10 +102,10 @@ export class UserResolver {
         };
       }
     }
-    
+
     return {
-      user
-    }
+      user,
+    };
   }
 
   /**
@@ -140,9 +120,19 @@ export class UserResolver {
     @Arg("password") password: string,
     @Ctx() ctx: MyContext
   ): Promise<UserResponse> {
-    const userRepo = getCustomRepository(UserRepository);
+    let option;
 
-    const user = await userRepo.findByUsernamOrEmail(usernameOrEmail);
+    if (usernameOrEmail.includes("@")) {
+      option = { email: usernameOrEmail };
+    } else {
+      option = { username: usernameOrEmail };
+    }
+
+    const user = await User.findOne(
+      usernameOrEmail.includes("@")
+        ? { where: { email: usernameOrEmail } }
+        : { where: { username: usernameOrEmail } }
+    );
 
     const errors: FieldError = {
       field: "usernameOrEmail",
@@ -175,7 +165,6 @@ export class UserResolver {
    */
   @Mutation(() => Boolean)
   async logout(@Ctx() ctx: MyContext) {
-
     return new Promise((resolve) =>
       ctx.req.session?.destroy((err) => {
         ctx.res.clearCookie(COOKIE_NAME);
@@ -200,11 +189,9 @@ export class UserResolver {
     @Arg("email") email: string,
     @Ctx() { redis }: MyContext
   ) {
-    const repo = getRepository(User);
-    const user = await repo.findOne({ where: { email } });
+    const user = await User.findOne({ where: { email } });
     if (!user) {
       // the email is not in the db
-      console.warn(`User with this email: ${email} not exist`)
       return true;
     }
 
@@ -225,7 +212,6 @@ export class UserResolver {
     return true;
   }
 
-
   /**
    *
    * @param token
@@ -236,7 +222,7 @@ export class UserResolver {
   async changePassword(
     @Arg("token") token: string,
     @Arg("newPassword") newPassword: string,
-    @Ctx() { redis, req, res }: MyContext
+    @Ctx() { redis, req }: MyContext
   ): Promise<UserResponse> {
     if (newPassword.length <= 2) {
       return {
@@ -261,8 +247,9 @@ export class UserResolver {
         ],
       };
     }
-    const repo = getRepository(User);
-    const user = await repo.findOne(userId);
+
+    const userIdNum = parseInt(userId);
+    const user = await User.findOne(userIdNum);
 
     if (!user) {
       return {
@@ -275,26 +262,13 @@ export class UserResolver {
       };
     }
     const password = await User.getHashedPassword(newPassword);
-    await repo.update({ id: userId }, { password });
+    await User.update({ id: userIdNum }, { password });
 
     await redis.del(key);
+    // log in user after change password
+    req.session.userId = user.id;
 
-    // clean everything, logout
-    
-    req.session?.destroy((err) => {
-      res.clearCookie(COOKIE_NAME);
-
-      if (err) {
-        console.log("err in logout ", err);
-        resolve(false);
-        return {
-            
-        }
-      }
-    });
-
-    return {
-    }
+    return { user };
   }
 }
 

@@ -38,7 +38,7 @@ enum PostType {
 
 @ObjectType()
 @Entity({ name: 'posts' })
-export class Post {
+export class Post extends BaseEntity {
   @Field()
   @PrimaryGeneratedColumn("uuid")
   id!: string;

@@ -67,17 +67,18 @@ export class PostResolver {
     // + 1 is for checking if there is more records exist
     const maxLimit = Math.min(limit, MAX_LIMIT) + 1
 
-    // ' "" ' we have to double quotes because naming restrinctions of postgres, 
-    // limit(maxLimit); // when take was used with orderBy there was `Cannot read property 'databaseName' of undefined` error
+    console.log("----------------------------")
+    
     const queryBuilder = getConnection().
       getRepository(Post).
       createQueryBuilder('p'). // alias for post
       innerJoinAndSelect(
         "p.owner",
         "u", // alias
-        "u.id = p.owner_id").
-      take(maxLimit).
-      orderBy('p.created_at', "DESC")
+        "u.id = p.owner_id" // ' "" ' we have to double quotes because naming restrinctions of postgres, 
+      ).
+      orderBy('p."created_at"', "DESC"). // should be single quoted becuase of postgres syntax
+      limit(maxLimit); // when take was used with orderBy there was `Cannot read property 'databaseName' of undefined` error
     
     if (cursor) {
       queryBuilder.where("p.created_at < :cursor", {cursor: new Date(parseInt(cursor))})
@@ -89,6 +90,7 @@ export class PostResolver {
     } catch (err) {
       console.error(err)
     }
+    console.log("----------------------------")
 
     return {
       posts: posts.slice(0, maxLimit - 1),

@@ -2,7 +2,7 @@ import { BaseEntity, PrimaryGeneratedColumn, Column, CreateDateColumn, Entity } 
 import { Field } from "type-graphql";
 
 @Entity({ name: "awards" })
-export class Award {
+export class Award extends BaseEntity {
   @Field()
   @PrimaryGeneratedColumn()
   id!: number;

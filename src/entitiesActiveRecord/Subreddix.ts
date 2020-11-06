@@ -19,7 +19,7 @@ import { User } from "./User";
  */
 @ObjectType()
 @Entity({ name: 'subreddixs' })
-export class Subreddix { 
+export class Subreddix extends BaseEntity { 
   @Field()
   @PrimaryGeneratedColumn("increment")
   id!: number;

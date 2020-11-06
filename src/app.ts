@@ -12,13 +12,15 @@ import dotenv from 'dotenv'
 import cors from 'cors'
 import path from 'path'
 
+import { SubRedddixResolver } from "./resolvers/subreddix";
 import { UserResolver } from './resolvers/user';
-import { IS_PROD, COOKIE_NAME } from './constants';
 import { PostResolver } from './resolvers/post';
+
+import { IS_PROD, COOKIE_NAME } from './constants';
 import typeORMConfig from './type-orm.config';
 import { sendEmail } from "./utils/sendEmail";
+
 import { Subreddix } from "./entities/Subreddix";
-import { User } from "./entities/User";
 import { User } from "./entities/User";
 import { Post } from "./entities/Post";
 import { Vote } from "./entities/Vote";
@@ -31,7 +33,13 @@ const ONE_WEEK = 1000 * 3600 * 24 * 7;
 const main = async () => {
   const PORT = 4400;
   
-  const orm = await createConnection({
+  /**
+   * Generally, you must create connection only once in your application bootstrap, 
+   * and close it after you completely finished working with the database. In practice, 
+   * if you are building a backend for your site and your backend server 
+   * always stays running - you never close a connection.
+   */
+  const connection = await createConnection({
     type: "postgres",
     database: "reddir",
     username: "postgres",
@@ -39,16 +47,12 @@ const main = async () => {
     logging: true,
     synchronize: true,
     migrations: [path.join(__dirname, "/migrations/*")],
-    entities: [User, Post, Vote],
+    entities: [User, Post, Vote, Subreddix],
     namingStrategy: new SnakeNamingStrategy()
   });
 
   // when you need to do migrations
-  // await orm.runMigrations()
-  
-  // when you need clean table
-  // await User.delete({})
-  // await Post.delete({});
+  // await connection.runMigrations()
   
   const app = express();
   const RedisStore = connectRedis(session)
@@ -80,7 +84,7 @@ const main = async () => {
 
   const apollo = new ApolloServer({
     schema: await buildSchema({
-      resolvers: [PostResolver, UserResolver],
+      resolvers: [PostResolver, UserResolver, SubRedddixResolver],
       validate: false
     }),
     context: ({req, res}) => ({ redis, req, res })

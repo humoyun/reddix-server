@@ -18,13 +18,16 @@ This project was aimed to learn state-of-the-art web technologies by recreating 
 
 ### Authentication
   1. [graphql-modules-auth](https://the-guild.dev/blog/graphql-modules-auth)
-  2. https://www.rdegges.com/2018/please-stop-using-local-storage/
+  2. [please-stop-using-local-storage](https://www.rdegges.com/2018/please-stop-using-local-storage)
 
-### Database 
-  1. [Full text search in PostgreSQL](https://www.postgresql.eu/events/pgconfeu2018/sessions/session/2116/slides/137/pgconf.eu-2018-fts.pdf)
-  2. [full-text-search](https://www.paulox.net/2017/12/22/full-text-search-in-django-with-postgresql)
-  3. [full-text-search](https://rocky.dev/full-text-search)
-  4. [Postgresql joins](https://www.postgresqltutorial.com/postgresql-joins)
+### Database
+  1. [Lazy Loading](https://www.mehdi-khalili.com/orm-anti-patterns-part-3-lazy-loading)
+  2. [Active Record](https://www.mehdi-khalili.com/orm-anti-patterns-part-1-active-record)
+  3. [Postgresql joins](https://www.postgresqltutorial.com/postgresql-joins)
+  4. [Full text search in PostgreSQL](https://www.postgresql.eu/events/pgconfeu2018/sessions/session/2116/slides/137/pgconf.eu-2018-fts.pdf)
+  5. [full-text-search](https://www.paulox.net/2017/12/22/full-text-search-in-django-with-postgresql)
+  6. [full-text-search](https://rocky.dev/full-text-search)
+  7. 
 
 ### Link Preview Related articles:
   1. [how-to-create-a-link-preview](https://andrejgajdos.com/how-to-create-a-link-preview)

@@ -3,7 +3,7 @@ import { Entity, BaseEntity, Column, PrimaryGeneratedColumn } from "typeorm";
 
 @ObjectType()
 @Entity({ name: "comments" })
-export class Comment {
+export class Comment extends BaseEntity {
   @Field()
   @PrimaryGeneratedColumn("increment")
   id!: string;

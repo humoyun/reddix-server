@@ -18,7 +18,7 @@ import { Vote } from "./Vote";
 
 @ObjectType()
 @Entity({ name: "users" })
-export class User {
+export class User extends BaseEntity {
   @Field()
   @PrimaryGeneratedColumn("uuid")
   id!: string;
@@ -91,6 +91,15 @@ export class User {
   @Field()
   @Column({ default: false })
   isActive: boolean;
+
+  static findByName(username: string) {
+    return (
+      this.createQueryBuilder("user")
+        .where("user.username = :username", { username })
+        // .andWhere("user.lastName = :lastName", { lastName })
+        .getMany()
+    );
+  }
 
   static async verifyPassword(real, toCheck): boolean { 
     let bool: boolean;

@@ -9,7 +9,7 @@ import { Post } from "./Post";
 @ObjectType()
 @Entity({ name: 'votes' })
 @Check(`"val" > -2 AND "val" < 2`)
-export class Vote { 
+export class Vote extends BaseEntity { 
   // @Field()
   @Column({ type: "int" })
   val: number;
