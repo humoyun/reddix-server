@@ -46,3 +46,14 @@ This project was aimed to learn state-of-the-art web technologies by recreating 
 ### Commenting system with threads
 
 > **Note:** The Project is still in development mode.
+
+
+
+## Choosing the right design for hierarchical data in Relational DB
+
+| Design                  | Num # Tables | Query Child | Query Subtree | Delete Node | Insert Node | Move Subtree | Referential Integrity |
+|-------------------------|--------------|-------------|---------------|-------------|-------------|--------------|-----------------------|
+| Adjacency List          |       1      |     Easy    |      Hard     |     Easy    |     Easy    |     Easy     |           Yes         |
+| Path Enumeration List   |       1      |     Hard    |      Easy     |     Easy    |     Easy    |     Easy     |           No          |
+| Nested Sets             |       1      |     Hard    |      Easy     |     Hard    |     Hard    |     Hard     |           No          |
+| **Closure Table**       |     **2**    |   **Easy**  |    **Easy**   |   **Easy**  |   **Easy**  |   **Easy**   |         **Yes**       |
