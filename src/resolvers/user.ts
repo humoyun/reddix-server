@@ -11,7 +11,7 @@ import {
   Field,
   Int,
 } from "type-graphql";
-import { getConnection, getRepository, getCustomRepository } from "typeorm";
+import { getRepository, getCustomRepository } from "typeorm";
 import { v4 } from "uuid";
 
 import { User } from "../entities/User";
@@ -26,7 +26,6 @@ import { FORGET_PASSWORD_PREFIX } from "../constants";
 import { UserInput, FieldError } from '../types'
 import { sendEmail } from "../utils/sendEmail";
 import { UserRepository } from "../repositories/UserRepository";
-import { query } from "express";
 
 @ObjectType()
 class TokenResponse { 
@@ -52,24 +51,28 @@ export class UserResponse {
 /**
  * 
  */
-@Resolver()
+@Resolver(User)
 export class UserResolver {
 
   @Query(() => User, { nullable: true })
-  me(@Ctx() ctx: MyContext) {
+  async me(@Ctx() ctx: MyContext) {
+    console.log("UserResolver", ctx.req.session.userId)
+    
     if (!ctx.req.session.userId) {
       return null;
     }
     
     const repo = getRepository(User);
-    return repo.findOne(ctx.req.session.userId)
+    const user = await repo.findOne(ctx.req.session.userId)
+    console.log(">>> ", user)
+    return user
   }
 
   @Query(() => TokenResponse)
   async checkToken(
     @Arg("token") token: String,
     @Ctx() { redis }: MyContext
-  ): TokenResponse {
+  ): Promise<TokenResponse>  {
     
     const key = FORGET_PASSWORD_PREFIX + token;
     const userId = await redis.get(key);
@@ -80,7 +83,7 @@ export class UserResolver {
           field: "token",
           message: "invalid token, expired or not valid",
         },
-        success: false;  
+        success: false  
       };
     }
 
@@ -89,7 +92,6 @@ export class UserResolver {
     };
   }
 
-
   /**
    *
    * @param title
@@ -97,14 +99,14 @@ export class UserResolver {
    */
   @Mutation(() => UserResponse)
   async register(
-    @Arg("args") args: UserInput,
-    @Ctx() ctx: MyContext
+    @Arg("args") args: UserInput
   ): Promise<UserResponse> {
     const errors = validateReg(args);
     if (errors) return { errors };
 
     const userRepo = await getCustomRepository(UserRepository);
-    let user: User;
+    let user: User | undefined;
+
     try {
       user = await userRepo.create(args)
     } catch (err) {
@@ -142,11 +144,11 @@ export class UserResolver {
   ): Promise<UserResponse> {
     const userRepo = getCustomRepository(UserRepository);
 
-    const user = await userRepo.findByUsernamOrEmail(usernameOrEmail);
+    const user = await userRepo.findByUsernameOrEmail(usernameOrEmail);
 
     const errors: FieldError = {
       field: "usernameOrEmail",
-      message: "this username or emaiil doesn't exist",
+      message: "this username or email doesn't exist",
     };
 
     if (!user) {
@@ -164,8 +166,10 @@ export class UserResolver {
     // no need for ! mark after session, as we updated type def of Context.Request
     ctx.req.session.userId = user.id;
 
+    console.log("ctx.req.session ", ctx.req.session)
+
     return {
-      user,
+      user
     };
   }
 
@@ -286,7 +290,7 @@ export class UserResolver {
 
       if (err) {
         console.log("err in logout ", err);
-        resolve(false);
+        // resolve(false);
         return {
             
         }

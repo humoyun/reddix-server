@@ -1,5 +1,5 @@
 import { ObjectType, Field } from "type-graphql";
-import { Entity, BaseEntity, Column, PrimaryGeneratedColumn } from "typeorm";
+import { Entity, Column, PrimaryGeneratedColumn } from "typeorm";
 
 @ObjectType()
 @Entity({ name: "comments" })
@@ -10,7 +10,7 @@ export class Comment {
 
   @Field()
   @Column()
-  parentId!: int;
+  parentId!: number;
 
   @Field()
   @Column({ type: "uuid" })

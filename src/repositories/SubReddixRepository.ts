@@ -1,7 +1,7 @@
-import {EntityRepository, getConnection, Repository} from "typeorm";
-import { Post } from "../entities/Post";
+import {EntityRepository, Repository} from "typeorm";
+import { Subreddix } from "../entities/Subreddix";
 
-@EntityRepository(Post)
-export class UserRepository extends Repository<Post> {
+@EntityRepository(Subreddix)
+export class SubreddixRepository extends Repository<Subreddix> {
 
 }

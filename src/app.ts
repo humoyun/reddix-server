@@ -12,7 +12,7 @@ import dotenv from 'dotenv'
 import cors from 'cors'
 import path from 'path'
 
-import { SubRedddixResolver } from "./resolvers/subreddix";
+import { SubreddixResolver } from "./resolvers/subreddix";
 import { UserResolver } from './resolvers/user';
 import { PostResolver } from './resolvers/post';
 
@@ -25,8 +25,9 @@ import { User } from "./entities/User";
 import { Post } from "./entities/Post";
 import { Vote } from "./entities/Vote";
 
-
 dotenv.config();
+
+console.log("IS_PROD" , IS_PROD)
 
 const ONE_WEEK = 1000 * 3600 * 24 * 7;
 
@@ -41,7 +42,7 @@ const main = async () => {
    */
   const connection = await createConnection({
     type: "postgres",
-    database: "reddir",
+    database: "reddix",
     username: "postgres",
     password: "postgres",
     logging: true,
@@ -69,12 +70,13 @@ const main = async () => {
       store: new RedisStore({
         client: redis,
         ttl: 86400 * 7, // one week
+        disableTouch: true
       }),
       cookie: {
         maxAge: ONE_WEEK, // one month
         httpOnly: true, // client cannot access this cookie
         secure: IS_PROD, // if true works only in https
-        sameSite: true, // csrf
+        sameSite: "lax", // csrf
       },
       saveUninitialized: false, //
       secret: process.env.SECRET_KEY as string,
@@ -84,7 +86,7 @@ const main = async () => {
 
   const apollo = new ApolloServer({
     schema: await buildSchema({
-      resolvers: [PostResolver, UserResolver, SubRedddixResolver],
+      resolvers: [PostResolver, UserResolver, SubreddixResolver],
       validate: false
     }),
     context: ({req, res}) => ({ redis, req, res })
@@ -94,7 +96,7 @@ const main = async () => {
   apollo.applyMiddleware({ app, cors: false });
 
   app.listen(PORT, ()=> {
-    console.log(`Reddir Server started at port: ${PORT}`)
+    console.log(`Reddix Server started at port: ${PORT}`)
   })  
 }
 

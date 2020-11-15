@@ -2,8 +2,9 @@ import { MyContext } from "../types";
 import { Arg, Ctx, Field, Mutation, ObjectType, Query, Resolver } from "type-graphql";
 import { Subreddix } from "../entities/Subreddix";
 import { slugify } from "../utils/common";
-import { getConnection } from "typeorm";
+import { getConnection, getCustomRepository, getRepository } from "typeorm";
 import { User } from "../entities/User";
+import { SubreddixRepository } from "../repositories/SubreddixRepository";
 
 @ObjectType()
 class SubreddixJoinResponse { 
@@ -15,7 +16,7 @@ class SubreddixJoinResponse {
 }
   
 @Resolver(Subreddix)
-export class SubRedddixResolver { 
+export class SubreddixResolver {
   
   @Mutation(() => Subreddix)
   async createSubreddix(
@@ -25,13 +26,23 @@ export class SubRedddixResolver {
     const ownerId = ctx.req.session.userId
     
     const slug = slugify(name)
-    const resp = await Subreddix.create({
+    const repo = getRepository(Subreddix)
+    const resp = repo.create({
       name,
       slug,
       ownerId,
-      flairs: [],
-      rules: []
-    }).save({relations: ["owner"]})
+    }) // save({relations: ["owner"]})
+ // save({relations: ["owner"]})
+
+    // await getConnection()
+    // .createQueryBuilder()
+    // .insert()
+    // .into(Subreddix)
+    // .values([
+    //     { name, slug, ownerId }, 
+    //   ])
+    // .execute();
+
 
     return resp
   }
@@ -40,16 +51,13 @@ export class SubRedddixResolver {
    * Get all subreddixs which the user joined
    * @param param0 
    */
-  @Query(() => [Subreddix], {nullable: true })
-  async getSubreddixs(@Ctx() { req }: MyContext): Promise<[Subreddix]> {
-    let result: Array<Subreddix>;
-    
+  @Query(() => [Subreddix], { nullable: true })
+  async getSubreddixs(@Ctx() { req }: MyContext): Promise<Subreddix[]> {
+    let result: Array<Subreddix> = [];
+    const repo = getRepository(Subreddix)
     try {
-      // result = await Subreddix.find()
-      await getConnection().
-        getRepository(User).
-        createQueryBuilder("u").
-        innerJoinAndSelect("u.subreddixes", "subreddixs", "", [])
+      result = await repo.createQueryBuilder("s").
+        innerJoinAndSelect("s.subreddixes", "members", "", []).getMany()
     } catch (err) {
       console.error(err)
     }
@@ -71,7 +79,7 @@ export class SubRedddixResolver {
     //   ).
     //   orderBy('sr."created_at"', "DESC"). // should be single quoted becuase of postgres syntax
     //   limit(maxLimit).get; // when take was used with orderBy there was `Cannot read property 'databaseName' of undefined` error
-
+    const repo = SubreddixRepository
     const resp = await Subreddix.find({ where: { slug }, relations: ["owner"] })
     console.log("RESP ", resp)
     return resp[0]
@@ -87,10 +95,16 @@ export class SubRedddixResolver {
     @Arg("slug") slug: string,
     @Ctx() { req }: MyContext): Promise<SubreddixJoinResponse> { 
     try {
-      const [subreddix] = await Subreddix.find({ slug, relations: ["members"] })
-      const user = await User.findOne(req.session.userId)
-      
-      const isMember = subreddix.members.find(m => m.id === user.id)
+      const uRepo = getRepository(User)
+      const srRepo = getRepository(Subreddix)
+
+      const subreddix = await srRepo.findOne({ slug }); // , { relations: ["members"] })
+      const user = await uRepo.findOne(req.session.userId)
+
+      console.log("joinSubreddix")
+      console.log("user", user)
+      console.log("subreddix", subreddix)
+      const isMember = subreddix?.members.find(m => m.id === user?.id)
       
       if (isMember && join)
         return {
@@ -99,12 +113,12 @@ export class SubRedddixResolver {
         }
 
       if (join) { 
-        subreddix.members = [user]
+        subreddix!.members = [user]
       } else {
-        subreddix.members = subreddix.members.filter(member => member.id !== user.id)
+        subreddix!.members = subreddix!.members.filter(member => member.id !== user!.id)
       }
 
-      subreddix.save();
+      // srRepo.save();
     } catch (err) {
       console.error(err)
       return {
@@ -114,7 +128,6 @@ export class SubRedddixResolver {
     }
     
     return {
-      errors: null,
       success: true
     };
   }

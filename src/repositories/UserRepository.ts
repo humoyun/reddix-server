@@ -1,11 +1,11 @@
-import {EntityRepository, getConnection, Repository} from "typeorm";
-import {User} from "../entities/User";
+import { EntityRepository, getConnection, Repository } from "typeorm";
+import { User } from "../entities/User";
 import { UserInput } from '../types'
 
 @EntityRepository(User)
 export class UserRepository extends Repository<User> {
 
-  async findByUsernamOrEmail(arg: string) {
+  async findByUsernameOrEmail(arg: string) {
     const condition = arg.includes("@")
       ? { where: { email: arg } }
       : { where: { username: arg } }

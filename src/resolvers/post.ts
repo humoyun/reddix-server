@@ -18,8 +18,7 @@ import { MyContext } from '../types'
 import { isAuth } from "../middlewares/isAuth";
 
 import { FieldError } from '../types'
-import { getConnection } from "typeorm";
-import { limits } from "argon2";
+import { getConnection, getRepository } from "typeorm";
 
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
@@ -67,7 +66,7 @@ export class PostResolver {
     // + 1 is for checking if there is more records exist
     const maxLimit = Math.min(limit, MAX_LIMIT) + 1
 
-    // ' "" ' we have to double quotes because naming restrinctions of postgres, 
+    // ' "" ' we have to double quotes because naming restrictions of Postgres 
     // limit(maxLimit); // when take was used with orderBy there was `Cannot read property 'databaseName' of undefined` error
     const queryBuilder = getConnection().
       getRepository(Post).
@@ -83,7 +82,7 @@ export class PostResolver {
       queryBuilder.where("p.created_at < :cursor", {cursor: new Date(parseInt(cursor))})
     }
     
-    let posts: Post[];
+    let posts: Post[] = [];
     try {
       posts = await queryBuilder.getMany();
     } catch (err) {
@@ -98,12 +97,11 @@ export class PostResolver {
 
   /* `() => Int` it can be omitted un this case, but just for demonstration */
   @Query(() => Post, { nullable: true })
-  async post(@Arg("id", () => Int) id: number): Promise<Post | null> {
+  async post(@Arg("id", () => Int) id: number): Promise<Post | undefined> {
 
-  const qb = getConnection().
-    getRepository(Post).find(id, { relations: [""] })
+    const post = await getConnection().getRepository(Post).findOne(id, { relations: ["votes"] })
 
-    return Post.find(id);
+    return post
   } 
 
   /**
@@ -111,7 +109,7 @@ export class PostResolver {
    * @param title
    * @param ctx
    */
-  @Mutation(returns => Post)
+  @Mutation(() => Post)
   @UseMiddleware(isAuth) 
   async createPost(
     @Arg("input") input: PostInput,
@@ -136,11 +134,11 @@ export class PostResolver {
     // } else if
     // need to check type based on this will create different post
     // media post (image&video), link extraction post, text post, rich text editor
-
-    return Post.create({
+    const repo = getRepository(Post)
+    return repo.create({
       ...input,
       ownerId: ctx.req.session.userId,
-    }).save();
+    });
   }
 
   /**
@@ -155,20 +153,22 @@ export class PostResolver {
     @Arg("title") title: string,
     @Arg("text", { nullable: true }) text: string
   ): Promise<Post | null> {
-    let post = await Post.findOne(id);
+    const repo = getRepository(Post);
+    let post = await repo.findOne(id);
 
     if (!post) {
       return null;
     }
-    let update = {};
+    let update = {} as Post;
     if (title) {
       update.title = title;
     }
     if (text) {
       update.text = text;
     }
-    if (Object.keys(update).length > 0)
-      await Post.update({ id }, { ...update });
+    if (Object.keys(update).length > 0) {
+      await repo.update(id, { ...update });
+    }
     // post title is old not udpated one,  so I am hacking little  bit, should find better way
     return { ...post, ...update };
   }
@@ -176,8 +176,9 @@ export class PostResolver {
   @Mutation(() => Boolean)
   @UseMiddleware(isAuth) 
   async deletePost(@Arg("id") id: number): Promise<boolean> {
+    const repo = getRepository(Post)
     try {
-      await Post.delete(id);
+      await repo.delete(id);
     } catch (err) {
       console.error(err);
       return false;
@@ -234,18 +235,24 @@ export class PostResolver {
     @Arg('val', () => Int) val: number,
     @Ctx() { req }: MyContext 
   ) { 
-    const userId = req.session.userId
+    // const repo = getRepository(Vote);
+    const userId = req.session.userId;
+    // validate just to make sure 
+    const validVal: number = val===0 ? 0 : (val > 0 ? 1 : -1);
     try {
-      // await getConnection()
-      //   .createQueryBuilder()
-      //   .update(Vote)
-      //   .set({ val })
-      //   .where("post_id = :pid AND userId = :mid", { pid: postId, mid: userId })
-      //   .execute();
+      await getConnection()
+        .createQueryBuilder()
+        .update(Vote)
+        .set({ val: validVal })
+        .where("post_id = :pid AND userId = :mid", { pid: postId, mid: userId })
+        .execute();
 
-      // validate just to make sure 
-      const updatedVal = val===0 ? 0 : (val>0?1:-1);
-      await Vote.update({ post_id: postId, user_id: userId }, { val: updatedVal })
+      
+      // await repo.update({ post_id: postId, user_id: userId }, { val: updatedVal })
+      // await repo.query(
+      //   "UPDATE votes SET val = $1 WHERE post_id = $2 AND user_id = $3;",
+      //   [validVal, postId, userId]
+      // );
     } catch (err) {
       console.error(err)
     }

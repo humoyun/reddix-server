@@ -1,10 +1,11 @@
 import { Request, Response } from 'express'
 import { InputType, ObjectType, Field } from "type-graphql";
 import { Redis } from 'ioredis';
+import Express from 'express-session'
 
 export type MyContext = {
   redis: Redis
-  req: Request & { session?: Express.Session }
+  req: Request & { session?: Express.Session & { userId: string } }
   res: Response
 }
 
@@ -34,3 +35,6 @@ export class FieldError {
   @Field()
   message: string
 }
+
+
+export type None = null | undefined

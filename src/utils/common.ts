@@ -1,5 +1,5 @@
-export const slugify = (URL: string): string => {
-  if (!URL) return
+export const slugify = (URL: string): string | undefined => {
+  if (!URL) return;
   
   const a = 'àáâäæãåāăąçćčđďèéêëēėęěğǵḧîïíīįìłḿñńǹňôöòóœøōõőṕŕřßśšşșťțûüùúūǘůűųẃẍÿýžźż·/_,:;'
   const b = 'aaaaaaaaaacccddeeeeeeeegghiiiiiilmnnnnoooooooooprrsssssttuuuuuuuuuwxyyzzz------'

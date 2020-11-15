@@ -1,6 +1,6 @@
-import { UserInput } from "../types";
+import { FieldError, UserInput } from "../types";
 
-export const validateReg = (args: UserInput) => {
+export const validateReg = (args: UserInput): [FieldError] | null => {
   if (
     !args.username ||
     args.username.includes("@") ||

@@ -1,8 +1,7 @@
 import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
-  UpdateDateColumn
-  BaseEntity,
+  UpdateDateColumn,
   ManyToMany,
   ManyToOne,
   Column,
@@ -12,7 +11,7 @@ import { Field, ObjectType } from "type-graphql";
 import { User } from "./User";
 
 /**
- * r/reddix is the default subreddit (community) driven by author
+ * r/reddix is the default subreddix (community) driven by author
  * 
  * r/AMA (Ask Me Anything)
  * r/ 
@@ -38,7 +37,7 @@ export class Subreddix {
   
   @Field(() => [String])
   @Column({ array: true})
-  flairs: string;
+  flairs?: string;
 
   @Field()
   @Column({ comment: "used for indicating who is the owner of this subreddix", nullable: false })
