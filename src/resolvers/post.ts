@@ -14,24 +14,30 @@ import {
 } from "type-graphql";
 import { Vote } from "../entities/Vote";
 import { Post } from "../entities/Post";
-import { MyContext } from '../types'
+import { MyContext, PostType, FieldError } from '../types'
 import { isAuth } from "../middlewares/isAuth";
 
-import { FieldError } from '../types'
 import { getConnection, getRepository } from "typeorm";
 
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
-@InputType()
-export class PostInput {
-  @Field()
-  title: string;
-  @Field()
-  text: string;
-}
 
 @InputType()
+class PostInput {
+  @Field()
+  title: string;
+    
+  @Field(type => PostType)
+  type!: PostType;
+
+  @Field()
+  text?: string;
+}
+
+
+
+@ObjectType()
 class PostResponse {
   @Field(() => [FieldError], { nullable: true })
   errors?: [FieldError]
@@ -109,36 +115,54 @@ export class PostResolver {
    * @param title
    * @param ctx
    */
-  @Mutation(() => Post)
+  @Mutation(() => PostResponse)
   @UseMiddleware(isAuth) 
   async createPost(
     @Arg("input") input: PostInput,
     @Ctx() ctx: MyContext
-  ): Promise<Post> {
+  ): Promise<PostResponse> {
     // if (!input.title) {
     //   return []
     // }
-
-    // if (type === PostTypes.LNK) {
-    //   Post.create({
-    //     link_preview: {
-    //       title: "",
-    //       desc: "",
-    //       imageUrl: "",
-    //       url: "",
-    //     },
-    //     ownerId: ctx.req.session?.userid
-    //   })
-    // } else if (type === PostTypes.IMG) {
-    //   
-    // } else if
     // need to check type based on this will create different post
     // media post (image&video), link extraction post, text post, rich text editor
+
+    const payload: Partial<Post> = {
+      type: input.type,
+      title: input.title,
+      ownerId: ctx.req.session?.userId
+    }
     const repo = getRepository(Post)
-    return repo.create({
-      ...input,
-      ownerId: ctx.req.session.userId,
-    });
+
+    if (input.type === PostType.LNK) {
+      payload.linkPreview = JSON.stringify({
+        title: "link_title",
+        desc: "link_desc",
+        imageUrl: "link_img_url",
+        url: "link_url",
+      })
+    } else if (input.type === PostType.IMG) {
+      payload.mediaUrl = "some_media_url"
+    } else if (input.type === PostType.PLL) {
+      console.log("createPost", PostType.PLL)
+    } else if (input.type === PostType.TXT) {
+      if (!input.text) {
+        return {
+          errors: [
+            { field: "Post.text", message: "cannot be empty" }
+          ]
+        }
+      }
+      payload.text = input.text;
+    }
+    // need to check type based on this will create different post
+    // media post (image&video), link extraction post, text post, rich text editor
+    
+    const resp = await repo.save(payload) as Post
+
+    return {
+      post: resp
+    }
   }
 
   /**

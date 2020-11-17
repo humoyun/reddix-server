@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'
-import { InputType, ObjectType, Field } from "type-graphql";
+import { InputType, ObjectType, Field, registerEnumType } from "type-graphql";
 import { Redis } from 'ioredis';
 import Express from 'express-session'
 
@@ -43,5 +43,10 @@ export enum PostType {
   LNK = "link",
   PLL = "poll"
 }
+
+registerEnumType(PostType,  {
+  name: "PostType",
+  description: "Defines possible values for post input type" 
+})
 
 export type None = null | undefined

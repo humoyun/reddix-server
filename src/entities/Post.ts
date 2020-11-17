@@ -40,8 +40,8 @@ export class Post {
   title!: string;
 
   @Field()
-  @Column()
-  text!: string;
+  @Column({ type: "text", nullable: true })
+  text: string;
 
   @Field()
   @Column({ type: "text", nullable: true })
@@ -55,9 +55,9 @@ export class Post {
   @Column({ type: "enum", enum: PostType, default: PostType.TXT  })
   type!: PostType; // image | video | text | poll | link
 
-  // @Field()
-  // @Column()
-  // mediaUrl?: string;
+  @Field()
+  @Column({ nullable: true })
+  mediaUrl?: string;
 
   @Field()
   @Column({ type: "json", nullable: true })
