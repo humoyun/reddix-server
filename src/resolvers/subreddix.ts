@@ -1,36 +1,52 @@
 import { MyContext } from "../types";
-import { Arg, Ctx, Field, Mutation, ObjectType, Query, Resolver } from "type-graphql";
+import { Arg, Ctx, Field, Mutation, ObjectType, Query, Resolver, UseMiddleware } from "type-graphql";
 import { Subreddix } from "../entities/Subreddix";
 import { slugify } from "../utils/common";
 import { getConnection, getCustomRepository, getRepository } from "typeorm";
 import { User } from "../entities/User";
 import { SubreddixRepository } from "../repositories/SubreddixRepository";
+import { isAuth } from "../middlewares/isAuth";
 
 @ObjectType()
-class SubreddixJoinResponse { 
+export class SubreddixResponse { 
   @Field(() => [String], { nullable: true })
   errors?: string[]
 
-  @Field({ nullable: true })
-  success: boolean
+  @Field(() => Subreddix, { nullable: true })
+  data?: Subreddix
 }
   
 @Resolver(Subreddix)
 export class SubreddixResolver {
   
-  @Mutation(() => Subreddix)
+  @Mutation(() => SubreddixResponse)
+  @UseMiddleware(isAuth) 
   async createSubreddix(
     @Arg("name") name: string,
     @Ctx() ctx: MyContext
-  ): Promise<Subreddix> { 
+  ): Promise<SubreddixResponse> { 
     const ownerId = ctx.req.session.userId
     
     const slug = slugify(name)
     const repo = getRepository(Subreddix)
-    const resp = repo.create({
+
+    const subreddix = await repo.findOne({ slug })
+    if (subreddix) {
+      console.log("subreddix ", subreddix)
+      return {
+        errors: [`subreddix ${subreddix.name} already exist`],
+        data: undefined
+      }
+    }
+
+    const uRepo = getRepository(User)
+    const user = await uRepo.findOne({id: ownerId})
+    console.log("createSubreddix:", user)
+    
+    const resp = await repo.save({
       name,
       slug,
-      ownerId,
+      owner: user
     }) // save({relations: ["owner"]})
  // save({relations: ["owner"]})
 
@@ -42,9 +58,11 @@ export class SubreddixResolver {
     //     { name, slug, ownerId }, 
     //   ])
     // .execute();
+    console.log("createSubreddix ", resp)
 
-
-    return resp
+    return {
+      data: resp
+    }
   }
 
   /**
@@ -65,42 +83,39 @@ export class SubreddixResolver {
     return result
   }
 
-  @Query(() => Subreddix)
+  @Query(() => Subreddix, { nullable: true })
   async getSubreddix(
     @Arg("slug") slug: string,
   ): Promise<Subreddix> { 
-    // const queryBuilder = getConnection().
-    //   getRepository(Subreddix).
-    //   createQueryBuilder('subr'). // alias for post
-    //   innerJoinAndSelect(
-    //     "subr.owner",
-    //     "u", // alias
-    //     "subr.  u.id = subr.owner_id" // ' "" ' we have to double quotes because naming restrinctions of postgres, 
-    //   ).
-    //   orderBy('sr."created_at"', "DESC"). // should be single quoted becuase of postgres syntax
-    //   limit(maxLimit).get; // when take was used with orderBy there was `Cannot read property 'databaseName' of undefined` error
-    const repo = SubreddixRepository
-    const resp = await Subreddix.find({ where: { slug }, relations: ["owner"] })
-    console.log("RESP ", resp)
-    return resp[0]
+    const repo = getCustomRepository(SubreddixRepository) 
+    const resp = await repo.findOne(
+      { where: { slug }, relations: ["owner", "members"] }
+    ) as Subreddix
+
+    return resp
   }
 
   async update() {
 
   }
 
-  @Mutation(() => SubreddixJoinResponse)
+  @Mutation(() => SubreddixResponse)
   async joinSubreddix(
     @Arg("join") join: boolean,
     @Arg("slug") slug: string,
-    @Ctx() { req }: MyContext): Promise<SubreddixJoinResponse> { 
+    @Ctx() { req }: MyContext): Promise<SubreddixResponse> { 
+    let subreddix;
     try {
       const uRepo = getRepository(User)
       const srRepo = getRepository(Subreddix)
-
-      const subreddix = await srRepo.findOne({ slug }); // , { relations: ["members"] })
+      
+      subreddix = await srRepo.findOne({ slug }, { relations: ["members"] });
       const user = await uRepo.findOne(req.session.userId)
-
+      if (!user) {
+        return {
+          errors: ["user not exist"],
+        }
+      }
       console.log("joinSubreddix")
       console.log("user", user)
       console.log("subreddix", subreddix)
@@ -109,26 +124,27 @@ export class SubreddixResolver {
       if (isMember && join)
         return {
           errors: ["You are already joined this subreddix"],
-          success: false
         }
 
+      const query = getConnection().createQueryBuilder().relation(Subreddix, "members").of(subreddix)
       if (join) { 
-        subreddix!.members = [user]
+        // subreddix!.members = [user]
+        query.add(user)
       } else {
-        subreddix!.members = subreddix!.members.filter(member => member.id !== user!.id)
+        query.remove(user)
+        // subreddix!.members = subreddix!.members.filter(member => member.id !== user!.id)
       }
-
-      // srRepo.save();
+      
     } catch (err) {
       console.error(err)
       return {
         errors: ["Server unhandled issue"],
-        success: false
       }
     }
     
     return {
-      success: true
+      errors: [],
+      data: subreddix
     };
   }
 

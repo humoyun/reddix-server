@@ -20,6 +20,7 @@ import { isAuth } from "../middlewares/isAuth";
 import { FieldError } from '../types'
 import { getConnection } from "typeorm";
 import { limits } from "argon2";
+import { PostType } from "../types";
 
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
@@ -28,6 +29,10 @@ const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 export class PostInput {
   @Field()
   title: string;
+    
+  @Field(() => PostType)
+  type: PostType;
+
   @Field()
   text: string;
 }
@@ -71,13 +76,13 @@ export class PostResolver {
     
     const queryBuilder = getConnection().
       getRepository(Post).
-      createQueryBuilder('p'). // alias for post
+      createQueryBuilder('p').
       innerJoinAndSelect(
         "p.owner",
         "u", // alias
-        "u.id = p.owner_id" // ' "" ' we have to double quotes because naming restrinctions of postgres, 
+        "u.id = p.owner_id" // ' "" ' we have to double quotes because naming restrictions of postgres, 
       ).
-      orderBy('p."created_at"', "DESC"). // should be single quoted becuase of postgres syntax
+      orderBy('p."created_at"', "DESC"). // should be single quoted because of postgres syntax
       limit(maxLimit); // when take was used with orderBy there was `Cannot read property 'databaseName' of undefined` error
     
     if (cursor) {
@@ -86,26 +91,26 @@ export class PostResolver {
     
     let posts: Post[];
     try {
-      posts = await queryBuilder.getMany();
+      posts = await queryBuilder.getMany() as Post[]; 
     } catch (err) {
       console.error(err)
     }
     console.log("----------------------------")
 
     return {
-      posts: posts.slice(0, maxLimit - 1),
-      hasMore: posts.length === maxLimit
+      posts: posts?.slice(0, maxLimit - 1),
+      hasMore: posts?.length === maxLimit
     }
   }
 
   /* `() => Int` it can be omitted un this case, but just for demonstration */
   @Query(() => Post, { nullable: true })
-  async post(@Arg("id", () => Int) id: number): Promise<Post | null> {
+  async post(@Arg("id", () => Int) id: number): Promise<Post | undefined> {
 
-  const qb = getConnection().
-    getRepository(Post).find(id, { relations: [""] })
+    const repo = getConnection().getRepository(Post)
+    const post = await repo.findOne(id, { relations: [""] })
 
-    return Post.find(id);
+    return post;
   } 
 
   /**
@@ -113,7 +118,7 @@ export class PostResolver {
    * @param title
    * @param ctx
    */
-  @Mutation(returns => Post)
+  @Mutation(() => Post)
   @UseMiddleware(isAuth) 
   async createPost(
     @Arg("input") input: PostInput,
@@ -131,7 +136,7 @@ export class PostResolver {
     //       imageUrl: "",
     //       url: "",
     //     },
-    //     ownerId: ctx.req.session?.userid
+    //     ownerId: ctx.req.session?.userId
     //   })
     // } else if (type === PostTypes.IMG) {
     //   
@@ -139,10 +144,10 @@ export class PostResolver {
     // need to check type based on this will create different post
     // media post (image&video), link extraction post, text post, rich text editor
 
-    return Post.create({
+    return repo.save({
       ...input,
       ownerId: ctx.req.session.userId,
-    }).save();
+    });
   }
 
   /**

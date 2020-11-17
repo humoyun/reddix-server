@@ -14,7 +14,7 @@ export class UserRepository extends Repository<User> {
     return user;
   }
 
-  async create(args: UserInput): Promise<User> {
+  async createOne(args: UserInput): Promise<User> {
     let user;
     const hashedPsw = await User.getHashedPassword(args.password);
 

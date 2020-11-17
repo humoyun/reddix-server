@@ -32,11 +32,11 @@ export class Subreddix {
   slug!: string;
 
   @Field(() => [String])
-  @Column({ array: true })
+  @Column("jsonb", { array: true, default: {} })
   rules: string;
   
   @Field(() => [String])
-  @Column({ array: true})
+  @Column({ array: true, default: {} })
   flairs?: string;
 
   @Field()
@@ -52,6 +52,7 @@ export class Subreddix {
    * ---------------------------------------------  
    * This is for subreddix membership relationship 
    */
+  @Field(() => [User])
   @ManyToMany(() => User, user => user.subreddixes)
   members: User[];
 

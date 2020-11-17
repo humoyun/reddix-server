@@ -5,13 +5,13 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
-  BaseEntity,
   ManyToOne,
   OneToMany,
 } from "typeorm";
 import { User } from "./User";
 import { Vote } from "./Vote";
-import { Flair } from "./Flair";
+import { PostType } from "../types";
+// import { Flair } from "./Flair";
 
 
 // Options
@@ -27,14 +27,6 @@ import { Flair } from "./Flair";
 //     }
 // })
 
-
-enum PostType {
-  IMG = "image",
-  VID = "video",
-  TXT = "text",
-  LNK = "link",
-  PLL = "poll"
-}
 
 @ObjectType()
 @Entity({ name: 'posts' })

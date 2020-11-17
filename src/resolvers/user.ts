@@ -56,7 +56,7 @@ export class UserResolver {
 
   @Query(() => User, { nullable: true })
   async me(@Ctx() ctx: MyContext) {
-    console.log("UserResolver", ctx.req.session.userId)
+    console.log("UserResolver", ctx.req.session)
     
     if (!ctx.req.session.userId) {
       return null;
@@ -108,7 +108,7 @@ export class UserResolver {
     let user: User | undefined;
 
     try {
-      user = await userRepo.create(args)
+      user = await userRepo.createOne(args)
     } catch (err) {
       console.error("err detail: ", err);
       // UniqueConstraintViolationException =>
@@ -162,10 +162,10 @@ export class UserResolver {
         errors: [errors],
       };
     }
-
+    console.log("user login ", user);//// -<<<
     // no need for ! mark after session, as we updated type def of Context.Request
     ctx.req.session.userId = user.id;
-
+    ctx.req.session.save()
     console.log("ctx.req.session ", ctx.req.session)
 
     return {

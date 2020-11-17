@@ -27,7 +27,7 @@ import { Vote } from "./entities/Vote";
 
 dotenv.config();
 
-console.log("IS_PROD" , IS_PROD)
+console.log("IS_PROD" , IS_PROD, COOKIE_NAME)
 
 const ONE_WEEK = 1000 * 3600 * 24 * 7;
 
@@ -69,7 +69,7 @@ const main = async () => {
       name: COOKIE_NAME,
       store: new RedisStore({
         client: redis,
-        ttl: 86400 * 7, // one week
+        // ttl: 86400 * 7, // one week
         disableTouch: true
       }),
       cookie: {
@@ -89,11 +89,19 @@ const main = async () => {
       resolvers: [PostResolver, UserResolver, SubreddixResolver],
       validate: false
     }),
-    context: ({req, res}) => ({ redis, req, res })
+    context: ({req, res}) => ({ redis, req, res }),
+    playground: {
+      settings: {
+        "request.credentials": "include"
+      }
+    }
   })
 
-  // defaulsts to cors: { origin: "*" }
-  apollo.applyMiddleware({ app, cors: false });
+  // defaults to cors: { origin: "*" }
+  apollo.applyMiddleware({ 
+    app, 
+    cors: false
+  });
 
   app.listen(PORT, ()=> {
     console.log(`Reddix Server started at port: ${PORT}`)

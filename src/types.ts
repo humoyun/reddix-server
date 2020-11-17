@@ -36,5 +36,12 @@ export class FieldError {
   message: string
 }
 
+export enum PostType {
+  IMG = "image",
+  VID = "video",
+  TXT = "text",
+  LNK = "link",
+  PLL = "poll"
+}
 
 export type None = null | undefined
