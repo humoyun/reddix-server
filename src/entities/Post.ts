@@ -13,7 +13,6 @@ import { Vote } from "./Vote";
 import { PostType } from "../types";
 // import { Flair } from "./Flair";
 
-
 // Options
 
 // @Entity({
@@ -47,19 +46,19 @@ export class Post {
   @Column({ type: "text", nullable: true })
   html: string;
   
-  @Field()
+  @Field({ nullable: true })
   @Column({ nullable: true })
-  flair: string;
+  flair?: string;
 
   @Field()
   @Column({ type: "enum", enum: PostType, default: PostType.TXT  })
   type!: PostType; // image | video | text | poll | link
 
-  @Field()
+  @Field({ nullable: true })
   @Column({ nullable: true })
   mediaUrl?: string;
 
-  @Field()
+  @Field({ nullable: true })
   @Column({ type: "json", nullable: true })
   linkPreview?: string;
 

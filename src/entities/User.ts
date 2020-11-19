@@ -92,19 +92,19 @@ export class User {
   @Column({ default: false })
   isActive: boolean;
 
-  static async verifyPassword(real, toCheck): boolean { 
-    let bool: boolean;
+  static async verifyPassword(real: string, toCheck: string): Promise<boolean | undefined>  { 
+    let bool: boolean | undefined;
     try {
       bool = await argon2.verify(real, toCheck)
     } catch (err) {
       console.error(err)
     }
 
-    return bool
+    return bool;
   }
 
-  static async getHashedPassword(plainPsword: string): string {
-    let hashedPsw: string;
+  static async getHashedPassword(plainPsword: string): Promise<string | undefined> {
+    let hashedPsw: string | undefined;
     try {
       hashedPsw = await argon2.hash(plainPsword);
     } catch (err) {

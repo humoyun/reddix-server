@@ -22,6 +22,43 @@ import { getConnection, getRepository } from "typeorm";
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
+interface CustomType {
+  [key: string]: any;
+}
+
+function isDateObject(date: any) {
+  return Object.prototype.toString.call(date) === '[object Date]'
+} 
+
+function isObject(obj: any) {
+  return (typeof obj === "object" && obj !== null) || typeof obj === "function";
+}
+
+const formatter = (data: CustomType): object | undefined => {
+  if (!data) return;
+
+  const result = { ...data }
+
+  Object.keys(data).forEach((key: string) => {
+    let tmp;
+
+    if (isObject(data[key]) && !isDateObject(data[key])) {
+      result[key] = formatter(data[key]);
+    } else if (key.includes("_")) {
+      tmp = key;
+      const index = tmp.indexOf("_");
+      tmp = tmp.replace("_", "")
+      tmp = `${tmp.slice(0, index)}${tmp[index].toUpperCase()}${tmp.slice(index+1)}`
+      result[tmp] = data[key];
+      delete result[key]
+    } else {
+      result[key] = data[key];
+    }
+  });
+
+  return result;
+}
+
 
 @InputType()
 class PostInput {
@@ -34,7 +71,6 @@ class PostInput {
   @Field()
   text?: string;
 }
-
 
 
 @ObjectType()
@@ -71,33 +107,56 @@ export class PostResolver {
     const MAX_LIMIT = 50;
     // + 1 is for checking if there is more records exist
     const maxLimit = Math.min(limit, MAX_LIMIT) + 1
-
-    // ' "" ' we have to double quotes because naming restrictions of Postgres 
-    // limit(maxLimit); // when take was used with orderBy there was `Cannot read property 'databaseName' of undefined` error
-    const queryBuilder = getConnection().
-      getRepository(Post).
-      createQueryBuilder('p'). // alias for post
-      innerJoinAndSelect(
-        "p.owner",
-        "u", // alias
-        "u.id = p.owner_id").
-      take(maxLimit).
-      orderBy('p.created_at', "DESC")
-    
+    const parameters: any[] = [maxLimit]
     if (cursor) {
-      queryBuilder.where("p.created_at < :cursor", {cursor: new Date(parseInt(cursor))})
+      parameters.push(new Date(parseInt(cursor)))
     }
+    let posts;
+
+    // there is some issue `orderBy` with `innerJoinAndSelect`, so I used raw SQL
+
+    // limit(maxLimit); // when take was used with orderBy there was `Cannot read property 'databaseName' of undefined` error
+    // const queryBuilder = getConnection().
+    //   getRepository(Post).
+    //   createQueryBuilder('p'). // alias for post
+    //   innerJoinAndSelect(
+    //     "p.owner",
+    //     "u", // alias
+    //     "u.id = p.owner_id").
+    //   take(maxLimit).
+    //   orderBy('p.created_at', "DESC")
     
-    let posts: Post[] = [];
+    // if (cursor) {
+    //   queryBuilder.where("p.created_at < :cursor", {cursor: new Date(parseInt(cursor))})
+    // }
+    
     try {
-      posts = await queryBuilder.getMany();
+      posts = await getConnection().query(`
+      SELECT p.*, 
+      json_build_object(
+        'id', u.id,
+        'username', u.username,
+        'email', u.email,
+        'created_at', u.created_at
+      ) AS owner
+      FROM posts p
+      INNER JOIN users u ON u.id = p.owner_id
+      ${cursor ? "WHERE p.created_at < $2" : "" }
+      ORDER BY p.created_at DESC
+      LIMIT $1
+    `, parameters)
     } catch (err) {
       console.error(err)
     }
 
+    // We need to format post properties as they are in snake_case, 
+    // we should convert them into camelCase for GraphQL 
+    
+    const formatted = posts.map((post: Post) => formatter(post))
+    // add textSnippet -> slice(0, 100)
     return {
-      posts: posts.slice(0, maxLimit - 1),
-      hasMore: posts.length === maxLimit
+      posts: formatted.slice(0, maxLimit - 1),
+      hasMore: formatted.length === maxLimit
     }
   }
 
@@ -121,9 +180,13 @@ export class PostResolver {
     @Arg("input") input: PostInput,
     @Ctx() ctx: MyContext
   ): Promise<PostResponse> {
-    // if (!input.title) {
-    //   return []
-    // }
+    if (!input.title) {
+      return {
+        errors: [
+          { field: "Post.title", message: "cannot be empty" }
+        ]
+      }
+    }
     // need to check type based on this will create different post
     // media post (image&video), link extraction post, text post, rich text editor
 
@@ -155,8 +218,6 @@ export class PostResolver {
       }
       payload.text = input.text;
     }
-    // need to check type based on this will create different post
-    // media post (image&video), link extraction post, text post, rich text editor
     
     const resp = await repo.save(payload) as Post
 
