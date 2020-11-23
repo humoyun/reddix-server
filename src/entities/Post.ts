@@ -42,7 +42,7 @@ export class Post {
   @Column({ type: "text", nullable: true })
   text: string;
 
-  @Field()
+  @Field({ nullable: true })
   @Column({ type: "text", nullable: true })
   html: string;
   

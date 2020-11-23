@@ -170,9 +170,9 @@ export class PostResolver {
 
   /* `() => Int` it can be omitted un this case, but just for demonstration */
   @Query(() => Post, { nullable: true })
-  async post(@Arg("id", () => Int) id: number): Promise<Post | undefined> {
+  async post(@Arg("id", () => String) id: string): Promise<Post | undefined> {
 
-    const post = await getConnection().getRepository(Post).findOne(id, { relations: ["votes"] })
+    const post = await getConnection().getRepository(Post).findOne(id, { relations: ["owner"] })
 
     return post
   } 
@@ -353,10 +353,6 @@ export class PostResolver {
     }
 
     return true
-  }
-
-  updateVote() { 
-    
   }
 
   @Mutation(() => Boolean)
