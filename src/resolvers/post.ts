@@ -132,7 +132,13 @@ export class PostResolver {
     
     try {
       posts = await getConnection().query(`
-      SELECT p.*, 
+      SELECT p.id,
+      p.title, 
+      p.text,
+      p.flair, 
+      p.type, 
+      p.points, 
+      p.created_at,
       json_build_object(
         'id', u.id,
         'username', u.username,
@@ -148,7 +154,7 @@ export class PostResolver {
     } catch (err) {
       console.error(err)
     }
-
+    console.log(posts)
     // We need to format post properties as they are in snake_case, 
     // we should convert them into camelCase for GraphQL 
     

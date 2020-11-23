@@ -1,4 +1,4 @@
-import { BaseEntity, PrimaryGeneratedColumn, Column, CreateDateColumn, Entity } from "typeorm";
+import { PrimaryGeneratedColumn, Column, CreateDateColumn, Entity } from "typeorm";
 import { Field } from "type-graphql";
 
 @Entity({ name: "awards" })

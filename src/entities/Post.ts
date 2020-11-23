@@ -38,7 +38,7 @@ export class Post {
   @Column()
   title!: string;
 
-  @Field()
+  @Field({ nullable: true })
   @Column({ type: "text", nullable: true })
   text: string;
 

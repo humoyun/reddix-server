@@ -1,5 +1,5 @@
 import { Field, ObjectType } from "type-graphql";
-import { BaseEntity, CreateDateColumn, PrimaryColumn } from "typeorm";
+import { CreateDateColumn, PrimaryColumn } from "typeorm";
 
 @ObjectType()
 export class Seen {  

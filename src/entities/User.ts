@@ -6,7 +6,6 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Column,
-  BaseEntity,
   OneToMany,
   ManyToMany,
   JoinTable,
@@ -53,15 +52,15 @@ export class User {
 
   /**
    * --------------------------------------------
-   * This is for Subreddir ownership relationship
-   * do not confuse ownSubreddirs with subreddirs (which is for membership)
+   * This is for Subreddixes ownership relationship
+   * do not confuse ownSubreddixes with subreddixes (which is for membership)
    */
   @OneToMany(() => Subreddix, subreddix => subreddix.owner)
   mySubreddixes: Subreddix[];
   /**
    * ---------------------------------------------
    * This is for subreddix membership relationship 
-   * bi-rirectional relationship
+   * bi-directional relationship
    */ 
   @ManyToMany(() => Subreddix, subreddix => subreddix.members)
   @JoinTable({
@@ -76,8 +75,6 @@ export class User {
     },
   })
   subreddixes: Subreddix[];
-
-
   // ---------------------------------------------
 
   @Field(() => String)
@@ -103,14 +100,15 @@ export class User {
     return bool;
   }
 
-  static async getHashedPassword(plainPsword: string): Promise<string | undefined> {
-    let hashedPsw: string | undefined;
+  static async getHashedPassword(plainPassword: string): Promise<string | undefined> {
+    let hashedPassword: string | undefined;
+
     try {
-      hashedPsw = await argon2.hash(plainPsword);
+      hashedPassword = await argon2.hash(plainPassword);
     } catch (err) {
       console.error(err)
     }
     
-    return hashedPsw
+    return hashedPassword
   }
 }
