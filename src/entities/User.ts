@@ -37,6 +37,9 @@ export class User {
   @Column()
   password!: string;
 
+  // @Column({ array: true, default: {} })
+  // feeds!: string;
+
   // @Field()
   // @Column()
   // role: string // default: member [can be admin to create subreddix]
@@ -47,7 +50,8 @@ export class User {
   posts: Post[];
 
   // relationship with Vote
-  @OneToMany(() => Vote, (v) => v.post)
+  @Field(()=> [Vote])
+  @OneToMany(() => Vote, (v) => v.user)
   votes: Vote[]
 
   /**

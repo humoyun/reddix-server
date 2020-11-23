@@ -130,6 +130,7 @@ export class PostResolver {
     //   queryBuilder.where("p.created_at < :cursor", {cursor: new Date(parseInt(cursor))})
     // }
     
+    // # need to join votes also in order to get 
     try {
       posts = await getConnection().query(`
       SELECT p.id,
@@ -159,7 +160,8 @@ export class PostResolver {
     // we should convert them into camelCase for GraphQL 
     
     const formatted = posts.map((post: Post) => formatter(post))
-    // add textSnippet -> slice(0, 100)
+    console.log("posts ", posts);
+
     return {
       posts: formatted.slice(0, maxLimit - 1),
       hasMore: formatted.length === maxLimit
@@ -285,38 +287,76 @@ export class PostResolver {
   @Mutation(() => Boolean)
   @UseMiddleware(isAuth)
   async vote(
-    @Arg('postId', () => Int) postId: number,
+    @Arg('postId', () => String) postId: number,
     @Arg('val', () => Int) val: number,
     @Ctx() {req}: MyContext
   ) { 
     const userId = req.session.userId
-    const queryRunner = await getConnection().createQueryRunner()  
+    const queryRunner = getConnection().createQueryRunner() 
     await queryRunner.connect()
-    await queryRunner.startTransaction()
-    try {
-      
-      await queryRunner.query(
-        'INSERT INTO vote (user_id, post_id, val) VALUES ($1, $2, $3);',
-        [userId, postId, val]
-      );
-      await queryRunner.query(
-        'UPDATE post SET points = points + $1 WHERE id = $2;',
-        [val, postId]
-      );
-      
-      await queryRunner.commitTransaction();
 
-    } catch (err) {
-      console.error(err)
-      // since we have errors let's rollback changes we made
-      await queryRunner.rollbackTransaction();
-      return false;
-    } finally {
-      // you need to release query runner which is manually created:
-      await queryRunner.release();
+    const vote = await queryRunner.query('SELECT * FROM votes WHERE post_id = $1 AND user_id = $2;', [postId, userId]);
+
+    console.log("vote => ", vote)
+    if (vote) {
+      await queryRunner.startTransaction()
+      
+      try {
+        await queryRunner.query(
+          'UPDATE votes SET val = $1 WHERE post_id = $2 AND user_id = $3;',
+          [val, postId, userId]
+        );
+        await queryRunner.query(
+          'UPDATE posts SET points = points + $1 WHERE id = $2;',
+          [val, postId]
+        );
+
+        await queryRunner.commitTransaction();
+      } catch (err) {
+        console.error(err)
+        await queryRunner.rollbackTransaction();
+      } finally {
+        // you need to release query runner which is manually created:
+        await queryRunner.release();
+      }
+
+    } else { 
+
+      await queryRunner.startTransaction()
+
+      // # one cannot vote his own post
+      // # one cannot vote more than one unit
+      // # 
+      
+      try {
+        
+        await queryRunner.query(
+          'INSERT INTO votes (user_id, post_id, val) VALUES ($1, $2, $3);',
+          [userId, postId, val]
+        );
+        await queryRunner.query(
+          'UPDATE posts SET points = points + $1 WHERE id = $2;',
+          [val, postId]
+        );
+        
+        await queryRunner.commitTransaction();
+
+      } catch (err) {
+        console.error(err)
+        // since we have errors let's rollback changes we made
+        await queryRunner.rollbackTransaction();
+        return false;
+      } finally {
+        // you need to release query runner which is manually created:
+        await queryRunner.release();
+      }
     }
 
     return true
+  }
+
+  updateVote() { 
+    
   }
 
   @Mutation(() => Boolean)

@@ -56,14 +56,13 @@ export class UserResolver {
 
   @Query(() => User, { nullable: true })
   async me(@Ctx() ctx: MyContext) {
-    console.log("UserResolver", ctx.req.session)
     
     if (!ctx.req.session.userId) {
       return null;
     }
     
     const repo = getRepository(User);
-    const user = await repo.findOne(ctx.req.session.userId)
+    const user = await repo.findOne(ctx.req.session.userId, {relations: ["votes"]} )
     console.log(">>> ", user)
     return user
   }

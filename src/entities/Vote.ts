@@ -10,7 +10,7 @@ import { Post } from "./Post";
 @Entity({ name: 'votes' })
 @Check(`"val" > -2 AND "val" < 2`)
 export class Vote { 
-  // @Field()
+  @Field()
   @Column({ type: "int" })
   val: number;
   
@@ -23,8 +23,9 @@ export class Vote {
   post: Post;
   
   @PrimaryColumn()
-  userId!: number;
+  userId!: string;
 
+  @Field()
   @PrimaryColumn()
-  postId!: number;
+  postId!: string;
 }
