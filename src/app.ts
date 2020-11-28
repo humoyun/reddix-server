@@ -10,7 +10,6 @@ import express from 'express';
 import Redis from "ioredis";
 import dotenv from 'dotenv'
 import cors from 'cors'
-import path from 'path'
 
 import { SubreddixResolver } from "./resolvers/subreddix";
 import { UserResolver } from './resolvers/user';
@@ -40,17 +39,7 @@ const main = async () => {
    * if you are building a backend for your site and your backend server 
    * always stays running - you never close a connection.
    */
-  const connection = await createConnection({
-    type: "postgres",
-    database: "reddix",
-    username: "postgres",
-    password: "postgres",
-    logging: true,
-    synchronize: true,
-    migrations: [path.join(__dirname, "/migrations/*")],
-    entities: [User, Post, Vote, Subreddix],
-    namingStrategy: new SnakeNamingStrategy()
-  });
+  const connection = await createConnection(IS_PROD ? typeORMConfig.prod :  typeORMConfig.dev);
 
   // when you need to do migrations
   // await connection.runMigrations()

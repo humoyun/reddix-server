@@ -18,5 +18,4 @@ export default {
   migrations: [path.join(__dirname, "/migrations/*")],
   entities: [User, Post, Vote]
   // debug: !IS_PROD
-  
 }
