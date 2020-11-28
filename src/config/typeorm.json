@@ -3,9 +3,9 @@
     "host": "localhost",
     "port": 5432,
     "username": "postgres",
-    "database": "reddir",
+    "database": "reddix",
     "entities": ["entities/*.ts"],
-    "migrationsTableName": "rdr_mgrt_table",
+    "migrationsTableName": "rdx_mgrt_table",
     "migrations": ["migrations/*.ts"],
     "cli": {
         "migrationsDir": "migrations"
