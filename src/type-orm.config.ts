@@ -1,21 +1,39 @@
-import { IS_PROD } from "./constants";
-import { Post } from "./entities/Post";
-import { Vote } from "./entities/Vote";
-import { User } from "./entities/User";
 import path from "path";
 
+import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
+import { IS_PROD, DB_CONFIG } from "./constants";
+import { Post } from "./entities/Post";
+import { Vote } from "./entities/Vote";
+import { Subreddix } from "./entities/Subreddix";
+import { User } from "./entities/User";
+
 export default {
-  // migrations: {
-  //   path: path.join(__dirname, './migrations'), // path to the folder with migrations
-  //   pattern: /^[\w-]+\d+\.[tj]s$/, // regex pattern for the migration files
-  // },
-  type: "postgres",
-  database: "reddir",
-  username: "postgres",
-  password: "postgres",
-  logging: true,
-  synchronize: !IS_PROD,
-  migrations: [path.join(__dirname, "/migrations/*")],
-  entities: [User, Post, Vote]
-  // debug: !IS_PROD
+  dev: {
+    // migrations: {
+    //   path: path.join(__dirname, './migrations'), // path to the folder with migrations
+    //   pattern: /^[\w-]+\d+\.[tj]s$/, // regex pattern for the migration files
+    // },
+    type: "postgres",
+    database: "reddix",
+    username: "postgres",
+    password: "postgres",
+    synchronize: !IS_PROD,
+    logging: !IS_PROD,
+    migrations: [path.join(__dirname, "/migrations/dev/*")],
+    entities: [User, Post, Vote, Subreddix],
+    namingStrategy: new SnakeNamingStrategy()
+  },
+  
+  prod: {
+    url: DB_CONFIG.url,
+    host: DB_CONFIG.host,
+    type: "postgres",
+    database: "reddix",
+    username: DB_CONFIG.username,
+    password: DB_CONFIG.password,
+    logging: !IS_PROD,
+    synchronize: !IS_PROD,
+    migrations: [path.join(__dirname, "/migrations/prod/*")],
+    entities: [User, Post, Vote, Subreddix]
+  }
 }
