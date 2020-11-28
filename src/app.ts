@@ -1,6 +1,5 @@
 // required to make the type reflection work
 import "reflect-metadata";
-import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { ApolloServer } from 'apollo-server-express';
 import { buildSchema } from 'type-graphql';
 import { createConnection } from "typeorm";
@@ -40,16 +39,18 @@ const main = async () => {
    * if you are building a backend for your site and your backend server 
    * always stays running - you never close a connection.
    */
+  // const connection = await createConnection(!IS_PROD ? typeORMConfig.prod : typeORMConfig.dev);
   const connection = await createConnection({
+    url: "",
+    host: "",
     type: "postgres",
     database: "reddix",
-    username: "postgres",
-    password: "postgres",
-    logging: true,
-    synchronize: true,
-    migrations: [path.join(__dirname, "/migrations/*")],
-    entities: [User, Post, Vote, Subreddix],
-    namingStrategy: new SnakeNamingStrategy()
+    username: "rhtvshgmmrhbpd",
+    password: "ee46207d54e231d067bb0af1595b1b49c5b",
+    logging: !IS_PROD,
+    synchronize: !IS_PROD,
+    migrations: [path.join(__dirname, "/migrations/prod/*")],
+    entities: [User, Post, Vote]
   });
 
   // when you need to do migrations

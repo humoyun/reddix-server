@@ -8,6 +8,7 @@
     "test": "test",
     "start": "node dist/app",
     "dev": "nodemon dist/app",
+    "build": "tsc src/app",
     "db:setup": "npx typeorm migration:create -n [your-migration-name] -d src/migrations"
   },
   "keywords": [

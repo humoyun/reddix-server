@@ -3,4 +3,6 @@ node_modules/
 .env
 package-lock.json
 
+DOCS.md
+
 */node_modules/*
