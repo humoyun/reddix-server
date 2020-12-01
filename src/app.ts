@@ -8,18 +8,17 @@ import connectRedis from "connect-redis";
 import session from 'express-session';
 import express from 'express';
 import Redis from "ioredis";
-import dotenv from 'dotenv'
+
 import cors from 'cors'
 
 import { SubreddixResolver } from "./resolvers/subreddix";
 import { UserResolver } from './resolvers/user';
 import { PostResolver } from './resolvers/post';
-
-import { IS_PROD, COOKIE_NAME, ORIGIN } from './constants';
 import typeORMConfig from './type-orm.config';
 
+import { IS_PROD, COOKIE_NAME, ORIGIN } from './constants';
+import { PostgresConnectionOptions } from "typeorm/driver/postgres/PostgresConnectionOptions";
 
-dotenv.config();
 
 console.log("IS_PROD" , IS_PROD)
 
@@ -35,10 +34,9 @@ const main = async () => {
    * always stays running - you never close a connection.
    */
     
-
    const options = IS_PROD ? typeORMConfig.prod : typeORMConfig.dev
    // const connection =
-   await createConnection(options);
+   await createConnection(options as PostgresConnectionOptions);
 
   // when you need to do migrations
   // await connection.runMigrations()

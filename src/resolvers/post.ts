@@ -59,7 +59,6 @@ const formatter = (data: CustomType): object | undefined => {
   return result;
 }
 
-
 @InputType()
 class PostInput {
   @Field()
@@ -91,6 +90,22 @@ class PaginatedPosts {
   hasMore: boolean
 }
 
+
+
+@ObjectType()
+class VoteResponse {
+  @Field(() => [FieldError], { nullable: true })
+  errors?: [FieldError]
+
+  @Field(() => Boolean, { nullable: true })
+  success?: boolean
+}
+
+
+
+/**
+ * 
+ */
 @Resolver(Post)
 export class PostResolver {
   // return only part of content
@@ -284,7 +299,7 @@ export class PostResolver {
    * ---------------------- VOTING ------------------------
    * The query runner used by EntityManager. Used only in transactional instances of EntityManager.
    */
-  @Mutation(() => Boolean)
+  @Mutation(() => VoteResponse)
   @UseMiddleware(isAuth)
   async vote(
     @Arg('postId', () => String) postId: number,
@@ -295,26 +310,52 @@ export class PostResolver {
     const queryRunner = getConnection().createQueryRunner() 
     await queryRunner.connect()
 
-    const vote = await queryRunner.query('SELECT * FROM votes WHERE post_id = $1 AND user_id = $2;', [postId, userId]);
+    let results;
 
-    console.log("vote => ", vote)
-    if (vote) {
+    try {
+      results = await queryRunner.query('SELECT * FROM votes WHERE post_id = $1 AND user_id = $2;', [postId, userId]);
+    } catch (err) {
+      if (err.message.includes('uuid:'))
+        return {
+          errors: [
+            {
+              field: 'uuid',
+              message: err.message
+            }
+          ],
+          success: false
+        }
+    }
+
+    console.log("vote => ", results)
+    if (results.length > 0) {
+      const realVal = results[0].val + val;
       await queryRunner.startTransaction()
       
       try {
         await queryRunner.query(
           'UPDATE votes SET val = $1 WHERE post_id = $2 AND user_id = $3;',
-          [val, postId, userId]
+          [realVal, postId, userId]
         );
-        await queryRunner.query(
-          'UPDATE posts SET points = points + $1 WHERE id = $2;',
-          [val, postId]
-        );
+        
+        // otherwise it will keep updating points by one everytime, because realVal is always 1 if val = 0
+        if (val!==0) {
+          await queryRunner.query(
+            'UPDATE posts SET points = points + $1 WHERE id = $2;',
+            [realVal, postId]
+          );
+        }
 
         await queryRunner.commitTransaction();
       } catch (err) {
-        console.error(err)
         await queryRunner.rollbackTransaction();
+        return {
+          errors: [{
+            field: 'val',
+            message: err.message
+          }],
+          success: false              
+        }
       } finally {
         // you need to release query runner which is manually created:
         await queryRunner.release();
@@ -342,49 +383,22 @@ export class PostResolver {
         await queryRunner.commitTransaction();
 
       } catch (err) {
-        console.error(err)
         // since we have errors let's rollback changes we made
         await queryRunner.rollbackTransaction();
-        return false;
+        return {
+          errors: [],
+          success: false
+        };
       } finally {
         // you need to release query runner which is manually created:
         await queryRunner.release();
       }
     }
 
-    return true
-  }
-
-  @Mutation(() => Boolean)
-  @UseMiddleware(isAuth)
-  async updateVote(
-    @Arg('postId', () => Int) postId: number,
-    @Arg('val', () => Int) val: number,
-    @Ctx() { req }: MyContext 
-  ) { 
-    // const repo = getRepository(Vote);
-    const userId = req.session.userId;
-    // validate just to make sure 
-    const validVal: number = val===0 ? 0 : (val > 0 ? 1 : -1);
-    try {
-      await getConnection()
-        .createQueryBuilder()
-        .update(Vote)
-        .set({ val: validVal })
-        .where("post_id = :pid AND userId = :mid", { pid: postId, mid: userId })
-        .execute();
-
-      
-      // await repo.update({ post_id: postId, user_id: userId }, { val: updatedVal })
-      // await repo.query(
-      //   "UPDATE votes SET val = $1 WHERE post_id = $2 AND user_id = $3;",
-      //   [validVal, postId, userId]
-      // );
-    } catch (err) {
-      console.error(err)
+    return {
+      errors: null,
+      success: true
     }
-
-    return true;
   }
-  
+
 }
