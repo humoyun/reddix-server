@@ -26,7 +26,6 @@ export class Vote {
   @PrimaryColumn()
   userId!: string;
 
-  @Field()
   @PrimaryColumn()
   postId!: string;
 }

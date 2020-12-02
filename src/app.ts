@@ -1,5 +1,6 @@
 // required to make the type reflection work
 import "reflect-metadata";
+
 import { ApolloServer } from 'apollo-server-express';
 import { buildSchema } from 'type-graphql';
 import { createConnection } from "typeorm";
@@ -7,26 +8,19 @@ import connectRedis from "connect-redis";
 import session from 'express-session';
 import express from 'express';
 import Redis from "ioredis";
-import dotenv from 'dotenv'
+
 import cors from 'cors'
-import path from 'path'
 
 import { SubreddixResolver } from "./resolvers/subreddix";
 import { UserResolver } from './resolvers/user';
 import { PostResolver } from './resolvers/post';
-
-import { IS_PROD, COOKIE_NAME } from './constants';
 import typeORMConfig from './type-orm.config';
-import { sendEmail } from "./utils/sendEmail";
 
-import { Subreddix } from "./entities/Subreddix";
-import { User } from "./entities/User";
-import { Post } from "./entities/Post";
-import { Vote } from "./entities/Vote";
+import { IS_PROD, COOKIE_NAME, ORIGIN } from './constants';
+import { PostgresConnectionOptions } from "typeorm/driver/postgres/PostgresConnectionOptions";
 
-dotenv.config();
 
-console.log("IS_PROD" , IS_PROD, COOKIE_NAME)
+console.log("IS_PROD" , IS_PROD)
 
 const ONE_WEEK = 1000 * 3600 * 24 * 7;
 
@@ -39,19 +33,10 @@ const main = async () => {
    * if you are building a backend for your site and your backend server 
    * always stays running - you never close a connection.
    */
-  // const connection = await createConnection(!IS_PROD ? typeORMConfig.prod : typeORMConfig.dev);
-  const connection = await createConnection({
-    url: "",
-    host: "",
-    type: "postgres",
-    database: "reddix",
-    username: "rhtvshgmmrhbpd",
-    password: "ee46207d54e231d067bb0af1595b1b49c5b",
-    logging: !IS_PROD,
-    synchronize: !IS_PROD,
-    migrations: [path.join(__dirname, "/migrations/prod/*")],
-    entities: [User, Post, Vote]
-  });
+    
+   const options = IS_PROD ? typeORMConfig.prod : typeORMConfig.dev
+   // const connection =
+   await createConnection(options as PostgresConnectionOptions);
 
   // when you need to do migrations
   // await connection.runMigrations()
@@ -61,7 +46,7 @@ const main = async () => {
   const redis = new Redis();
 
   app.use(cors({
-    origin: "http://localhost:4411",
+    origin: IS_PROD ? ORIGIN.PROD : ORIGIN.DEV,
     credentials: true
   }));
 

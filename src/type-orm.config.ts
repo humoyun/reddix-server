@@ -1,11 +1,13 @@
-import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
-import { IS_PROD } from "./constants";
-import { Post } from "./entities/Post";
-import { Vote } from "./entities/Vote";
-import { User } from "./entities/User";
 import path from "path";
 
-export default DB_CONFIG = {
+import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
+import { IS_PROD, DB_CONFIG } from "./constants";
+import { Post } from "./entities/Post";
+import { Vote } from "./entities/Vote";
+import { Subreddix } from "./entities/Subreddix";
+import { User } from "./entities/User";
+
+export default {
   dev: {
     // migrations: {
     //   path: path.join(__dirname, './migrations'), // path to the folder with migrations
@@ -23,15 +25,15 @@ export default DB_CONFIG = {
   },
   
   prod: {
-    url: "postgres://rhtvshgmmrhbpd:566420ab69e91df0853b538bae44eee46207d54e231d067bb0af1595b1b49c5b@ec2-18-210-90-1.compute-1.amazonaws.com:5432/d6o45ofn89g2sv",
-    host: "ec2-18-210-90-1.compute-1.amazonaws.com",
+    url: DB_CONFIG.url,
+    host: DB_CONFIG.host,
     type: "postgres",
     database: "reddix",
-    username: "rhtvshgmmrhbpd",
-    password: "566420ab69e91df0853b538bae44eee46207d54e231d067bb0af1595b1b49c5b",
+    username: DB_CONFIG.username,
+    password: DB_CONFIG.password,
     logging: !IS_PROD,
     synchronize: !IS_PROD,
     migrations: [path.join(__dirname, "/migrations/prod/*")],
-    entities: [User, Post, Vote]
+    entities: [User, Post, Vote, Subreddix]
   }
 }

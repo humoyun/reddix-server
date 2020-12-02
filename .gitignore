@@ -3,6 +3,5 @@ node_modules/
 .env
 package-lock.json
 
-DOCS.md
+.vscode/
 
-*/node_modules/*
