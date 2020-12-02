@@ -1,4 +1,4 @@
-import { Field, ObjectType } from "type-graphql";
+import { Field, Int, ObjectType } from "type-graphql";
 import {  Check, Column, Entity, ManyToMany, ManyToOne, PrimaryColumn } from "typeorm";
 import { User } from "./User";
 import { Post } from "./Post";
@@ -10,6 +10,7 @@ import { Post } from "./Post";
 @Entity({ name: 'votes' })
 @Check(`"val" > -2 AND "val" < 2`)
 export class Vote { 
+  // () => Int
   @Field()
   @Column({ type: "int" })
   val: number;
