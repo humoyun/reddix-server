@@ -281,12 +281,24 @@ export class PostResolver {
     return { ...post, ...update };
   }
 
+  /**
+   *
+   * @param id 
+   */
   @Mutation(() => Boolean)
-  @UseMiddleware(isAuth) 
-  async deletePost(@Arg("id") id: number): Promise<boolean> {
+  @UseMiddleware(isAuth)
+  async deletePost(@Arg("id") id: string, @Ctx() ctx: MyContext): Promise<boolean> {
     const repo = getRepository(Post)
     try {
-      await repo.delete(id);
+      await repo.delete({ id, ownerId: ctx?.req.session.userId });
+
+      // TODO: second way, I need to check which is more efficient
+      // await getConnection().
+      //   createQueryBuilder()
+      //     .delete()
+      //     .from(Post)
+      //     .where("id = :id AND owner_id = :oid", { id, oid: ctx?.req.session.userId })
+      //     .execute()
     } catch (err) {
       console.error(err);
       return false;
@@ -299,14 +311,28 @@ export class PostResolver {
    * ---------------------- VOTING ------------------------
    * The query runner used by EntityManager. Used only in transactional instances of EntityManager.
    */
+  // TODO: add rate limiting support
   @Mutation(() => VoteResponse)
   @UseMiddleware(isAuth)
   async vote(
     @Arg('postId', () => String) postId: number,
     @Arg('val', () => Int) val: number,
     @Ctx() {req}: MyContext
-  ) { 
+  ) {
     const userId = req.session.userId
+    const postRepo = getRepository(Post);
+    const post = await postRepo.findOne(postId);
+
+    if (post && post.ownerId === userId) {
+      return {
+        errors: [{
+          field: 'user',
+          message: 'cannot vote one\'s vote' 
+        }],
+        success: false
+      }
+    }
+
     const queryRunner = getConnection().createQueryRunner() 
     await queryRunner.connect()
 
@@ -327,9 +353,10 @@ export class PostResolver {
         }
     }
 
-    console.log("vote => ", results)
     if (results.length > 0) {
-      const realVal = results[0].val + val;
+      const [vote] = results[0];      
+      const realVal = vote.val + val;
+
       await queryRunner.startTransaction()
       
       try {
