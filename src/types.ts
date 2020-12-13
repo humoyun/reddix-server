@@ -3,10 +3,13 @@ import { InputType, ObjectType, Field, registerEnumType } from "type-graphql";
 import { Redis } from 'ioredis';
 import Express from 'express-session'
 
+import {voteLoader} from './utils/voteLoader'
+
 export type MyContext = {
   redis: Redis
   req: Request & { session?: Express.Session & { userId: string } }
   res: Response
+  voteLoader: ReturnType<typeof voteLoader>
 }
 
 export type NotAuthorizedError = {

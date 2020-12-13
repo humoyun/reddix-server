@@ -19,6 +19,7 @@ import typeORMConfig from './type-orm.config';
 import { IS_PROD, COOKIE_NAME, ORIGIN } from './constants';
 import { PostgresConnectionOptions } from "typeorm/driver/postgres/PostgresConnectionOptions";
 
+import { voteLoader } from './utils/voteLoader'
 
 console.log("IS_PROD" , IS_PROD)
 
@@ -75,7 +76,12 @@ const main = async () => {
       resolvers: [PostResolver, UserResolver, SubreddixResolver],
       validate: false
     }),
-    context: ({req, res}) => ({ redis, req, res }),
+    context: ({req, res}) => ({ 
+      redis, 
+      req, 
+      res,
+      voteLoader: voteLoader()
+    }),
     playground: {
       settings: {
         "request.credentials": "include"
