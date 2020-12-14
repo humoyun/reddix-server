@@ -26,8 +26,9 @@ This project was aimed to learn state-of-the-art web technologies by recreating 
   3. [Postgresql joins](https://www.postgresqltutorial.com/postgresql-joins)
   4. [Full text search in PostgreSQL](https://www.postgresql.eu/events/pgconfeu2018/sessions/session/2116/slides/137/pgconf.eu-2018-fts.pdf)
   5. [full-text-search](https://www.paulox.net/2017/12/22/full-text-search-in-django-with-postgresql)
-  6. [full-text-search](https://rocky.dev/full-text-search)
-  7. 
+  6. [full-text-search-ii](https://rocky.dev/full-text-search)
+  7. [subquery-vs-join](https://learnsql.com/blog/subquery-vs-join)
+  8. 
 
 ### Link Preview Related articles:
   1. [how-to-create-a-link-preview](https://andrejgajdos.com/how-to-create-a-link-preview)
