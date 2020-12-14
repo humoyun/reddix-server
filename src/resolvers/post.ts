@@ -1,3 +1,4 @@
+import { User } from './../entities/User';
 import {
   Resolver,
   Query,
@@ -12,7 +13,6 @@ import {
   Root,
   ObjectType,
 } from "type-graphql";
-import { Vote } from "../entities/Vote";
 import { Post } from "../entities/Post";
 import { MyContext, PostType, FieldError } from '../types'
 import { isAuth } from "../middlewares/isAuth";
@@ -114,6 +114,18 @@ export class PostResolver {
     return root.text && root.text.slice(0, 100)
   }
 
+  // use with Dataloader otherwise you will have a N + 1 problem
+  @FieldResolver(() => Int, { nullable: true })
+  async voteStatus(@Root() post: Post, @Ctx() { voteLoader, req }: MyContext) {
+    if (!req.session.userId) {
+      return null
+    }
+
+    const vote = await voteLoader.load({ postId: post.id, userId: req.session.userId })
+
+    return vote ? vote.val : null 
+  }
+
   @Query(() => PaginatedPosts)
   async posts(
     @Arg("limit", () => Int) limit: number,
@@ -123,29 +135,12 @@ export class PostResolver {
     // + 1 is for checking if there is more records exist
     const maxLimit = Math.min(limit, MAX_LIMIT) + 1
     const parameters: any[] = [maxLimit]
+
     if (cursor) {
       parameters.push(new Date(parseInt(cursor)))
     }
     let posts;
 
-    // there is some issue `orderBy` with `innerJoinAndSelect`, so I used raw SQL
-
-    // limit(maxLimit); // when take was used with orderBy there was `Cannot read property 'databaseName' of undefined` error
-    // const queryBuilder = getConnection().
-    //   getRepository(Post).
-    //   createQueryBuilder('p'). // alias for post
-    //   innerJoinAndSelect(
-    //     "p.owner",
-    //     "u", // alias
-    //     "u.id = p.owner_id").
-    //   take(maxLimit).
-    //   orderBy('p.created_at', "DESC")
-    
-    // if (cursor) {
-    //   queryBuilder.where("p.created_at < :cursor", {cursor: new Date(parseInt(cursor))})
-    // }
-    
-    // # need to join votes also in order to get 
     try {
       posts = await getConnection().query(`
       SELECT p.id,
@@ -170,12 +165,10 @@ export class PostResolver {
     } catch (err) {
       console.error(err)
     }
-    console.log(posts)
     // We need to format post properties as they are in snake_case, 
     // we should convert them into camelCase for GraphQL 
     
     const formatted = posts.map((post: Post) => formatter(post))
-    console.log("posts ", posts);
 
     return {
       posts: formatted.slice(0, maxLimit - 1),
@@ -281,12 +274,24 @@ export class PostResolver {
     return { ...post, ...update };
   }
 
+  /**
+   *
+   * @param id 
+   */
   @Mutation(() => Boolean)
-  @UseMiddleware(isAuth) 
-  async deletePost(@Arg("id") id: number): Promise<boolean> {
+  @UseMiddleware(isAuth)
+  async deletePost(@Arg("id") id: string, @Ctx() ctx: MyContext): Promise<boolean> {
     const repo = getRepository(Post)
     try {
-      await repo.delete(id);
+      await repo.delete({ id, ownerId: ctx?.req.session.userId });
+
+      // TODO: second way, I need to check which is more efficient
+      // await getConnection().
+      //   createQueryBuilder()
+      //     .delete()
+      //     .from(Post)
+      //     .where("id = :id AND owner_id = :oid", { id, oid: ctx?.req.session.userId })
+      //     .execute()
     } catch (err) {
       console.error(err);
       return false;
@@ -299,14 +304,28 @@ export class PostResolver {
    * ---------------------- VOTING ------------------------
    * The query runner used by EntityManager. Used only in transactional instances of EntityManager.
    */
+  // TODO: add rate limiting support
   @Mutation(() => VoteResponse)
   @UseMiddleware(isAuth)
   async vote(
     @Arg('postId', () => String) postId: number,
     @Arg('val', () => Int) val: number,
     @Ctx() {req}: MyContext
-  ) { 
+  ) {
     const userId = req.session.userId
+    const postRepo = getRepository(Post);
+    const post = await postRepo.findOne(postId);
+
+    if (post && post.ownerId === userId) {
+      return {
+        errors: [{
+          field: 'user',
+          message: 'cannot vote one\'s vote' 
+        }],
+        success: false
+      }
+    }
+
     const queryRunner = getConnection().createQueryRunner() 
     await queryRunner.connect()
 
@@ -326,29 +345,33 @@ export class PostResolver {
           success: false
         }
     }
-
-    console.log("vote => ", results)
+    console.log("********** results ", results)
     if (results.length > 0) {
-      const realVal = results[0].val + val;
+      const [vote] = results;      
+      const updateVal = vote.val+val
       await queryRunner.startTransaction()
-      
+      console.log("--------------------")
+
       try {
         await queryRunner.query(
           'UPDATE votes SET val = $1 WHERE post_id = $2 AND user_id = $3;',
-          [realVal, postId, userId]
+          [updateVal, postId, userId]
         );
         
-        // otherwise it will keep updating points by one everytime, because realVal is always 1 if val = 0
-        if (val!==0) {
-          await queryRunner.query(
-            'UPDATE posts SET points = points + $1 WHERE id = $2;',
-            [realVal, postId]
-          );
-        }
+        // otherwise it will keep updating points by one every time, because realVal is always 1 if val = 0
+        
+        await queryRunner.query(
+          'UPDATE posts SET points = points + $1 WHERE id = $2;',
+          [val, postId]
+        );
+        
+        console.log("--------------------")
 
         await queryRunner.commitTransaction();
+        console.log("--------------------")
       } catch (err) {
         await queryRunner.rollbackTransaction();
+        console.log("-------------------- err", err)
         return {
           errors: [{
             field: 'val',
@@ -360,17 +383,12 @@ export class PostResolver {
         // you need to release query runner which is manually created:
         await queryRunner.release();
       }
-
     } else { 
-
       await queryRunner.startTransaction()
-
       // # one cannot vote his own post
       // # one cannot vote more than one unit
       // # 
-      
       try {
-        
         await queryRunner.query(
           'INSERT INTO votes (user_id, post_id, val) VALUES ($1, $2, $3);',
           [userId, postId, val]
@@ -381,7 +399,6 @@ export class PostResolver {
         );
         
         await queryRunner.commitTransaction();
-
       } catch (err) {
         // since we have errors let's rollback changes we made
         await queryRunner.rollbackTransaction();

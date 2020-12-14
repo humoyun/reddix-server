@@ -1,4 +1,4 @@
-import { ObjectType, Field } from "type-graphql";
+import { ObjectType, Field, Int } from "type-graphql";
 import {
   Entity,
   Column,
@@ -61,6 +61,17 @@ export class Post {
   @Field({ nullable: true })
   @Column({ type: "json", nullable: true })
   linkPreview?: string;
+
+  // TODO: I need to either select all posts which user voted 
+  // before getAllPosts request, and handle showing vote status on client side
+  // or I need to fetch related votes when I fetch posts from DB in posts resolver method
+
+  // on front-end I need to revalidate the cache also when votes changes
+
+  // we need this field to show vote status ???
+  // but it will not be reflected on posts table 
+  @Field(() => Int, { nullable: true })
+  voteStatus: number | null;
 
   // @Field()
   // @Column()

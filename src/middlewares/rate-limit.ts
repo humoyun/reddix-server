@@ -1,14 +1,14 @@
 import { MiddlewareFn } from "type-graphql";
 import { MyContext } from "src/types";
+import { RATE_LIMIT_KEY } from '../constants'
 
 const ONE_DAY = 60 * 60 * 24;
-const RATE_LIMIT_KEY = 'rate-limit';
 
 type RateLimitFunc = (limit?: number) => MiddlewareFn<MyContext>
 
 /**
  * Awesome way to do rate limiting without using Number of requests
- * TODO take a look at: https://www.yelp.com/developers/graphql/guides/rate_limiting 
+ * TODO: take a look at: https://www.yelp.com/developers/graphql/guides/rate_limiting 
  */
 
 export const rateLimit: RateLimitFunc = (limit: 50) => async ({ context: { req, redis }, info }, next) => { 

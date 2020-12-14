@@ -1,10 +1,10 @@
-import { Field, Int, ObjectType } from "type-graphql";
-import {  Check, Column, Entity, ManyToMany, ManyToOne, PrimaryColumn } from "typeorm";
+import { Field, ObjectType } from "type-graphql";
+import {  Check, Column, Entity, ManyToOne, PrimaryColumn } from "typeorm";
 import { User } from "./User";
 import { Post } from "./Post";
 
 
-// many to many relationshiup between posts and users
+// many to many relationship between posts and users
 // users -> votes <- posts
 @ObjectType()
 @Entity({ name: 'votes' })
