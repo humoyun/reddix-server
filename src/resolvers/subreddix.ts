@@ -1,4 +1,4 @@
-import { MyContext } from "../types";
+import { MyContext, SubreddixType } from "../types";
 import { Arg, Ctx, Field, Mutation, ObjectType, Query, Resolver, UseMiddleware } from "type-graphql";
 import { Subreddix } from "../entities/Subreddix";
 import { slugify } from "../utils/common";
@@ -23,6 +23,9 @@ export class SubreddixResolver {
   @UseMiddleware(isAuth) 
   async createSubreddix(
     @Arg("name") name: string,
+    @Arg("type") type: SubreddixType,
+    @Arg("description") description: string,
+    @Arg("topics", () => [String]) topics: Array<string>,
     @Ctx() ctx: MyContext
   ): Promise<SubreddixResponse> { 
     const ownerId = ctx.req.session.userId
@@ -42,9 +45,12 @@ export class SubreddixResolver {
     const uRepo = getRepository(User)
     const user = await uRepo.findOne({id: ownerId})
     console.log("createSubreddix:", user)
-    
+
     const resp = await repo.save({
       name,
+      type,
+      description,
+      topics,
       slug,
       owner: user
     }) // save({relations: ["owner"]})
@@ -58,10 +64,17 @@ export class SubreddixResolver {
     //     { name, slug, ownerId }, 
     //   ])
     // .execute();
-    console.log("createSubreddix ", resp)
 
+    if (!resp) { 
+      return {
+        errors: ['some issue'],
+        data: null
+      }
+    }
+    
+    const convertedTopics = resp.topics.match(/[\w.-]+/g).map(String)
     return {
-      data: resp
+      data: {...resp, topics: convertedTopics}
     }
   }
 

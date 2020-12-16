@@ -5,11 +5,11 @@ import {
   ManyToMany,
   ManyToOne,
   Column,
-  Entity,
+  Entity
 } from "typeorm";
 import { Field, ObjectType } from "type-graphql";
 import { User } from "./User";
-
+import { SubreddixType } from "../types";
 /**
  * r/reddix is the default subreddix (community) driven by author
  * 
@@ -18,18 +18,31 @@ import { User } from "./User";
  */
 @ObjectType()
 @Entity({ name: 'subreddixs' })
-export class Subreddix { 
+export class Subreddix {
   @Field()
   @PrimaryGeneratedColumn("increment")
   id!: number;
 
   @Field()
   @Column({ unique: true })
-  name!: string; 
+  name!: string;
+
+  @Field()
+  @Column({ comment: "This is how new members come to understand your community" })
+  description!: string;
   
   @Field()
   @Column({ unique: true })
   slug!: string;
+  
+  // private | restricted | public
+  @Field()
+  @Column({ type: 'enum', enum: SubreddixType, default: SubreddixType.PUB })
+  type!: SubreddixType;
+
+  @Field(() => [String])
+  @Column({ array: true, default: {}, comment: 'This will help relevant users find your community' })
+  topics!: string;
 
   @Field(() => [String])
   @Column("jsonb", { array: true, default: {} })
@@ -37,10 +50,10 @@ export class Subreddix {
   
   @Field(() => [String])
   @Column({ array: true, default: {} })
-  flairs?: string;
+  flairs?: string;  
 
   @Field()
-  @Column({ comment: "used for indicating who is the owner of this subreddix", nullable: false })
+  @Column({ nullable: false, comment: "used for indicating who is the owner of this subreddix" })
   ownerId!: string;
   // ---------------------------------------------
 

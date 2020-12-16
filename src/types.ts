@@ -47,6 +47,12 @@ export enum PostType {
   PLL = "poll"
 }
 
+export enum SubreddixType {
+  PRV = "private",
+  RST = "restricted",
+  PUB = "public"
+}
+
 registerEnumType(PostType,  {
   name: "PostType",
   description: "Defines possible values for post input type" 
