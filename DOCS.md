@@ -1,6 +1,9 @@
 # to check dns propagation on website
 https://dnschecker.org
 
+# about communities on reddit
+https://mods.reddithelp.com/hc/en-us/articles/360044230532-How-can-I-control-how-people-find-my-community-
+
 # to check dns propagation on cli 
 command line: dig ns reddix.xyz
 

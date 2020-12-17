@@ -1,12 +1,12 @@
-import { ObjectType, Field } from "type-graphql";
+import { ObjectType, Field, Int } from "type-graphql";
 import { Entity, Column, PrimaryGeneratedColumn } from "typeorm";
 
 @ObjectType()
 @Entity({ name: "comments" })
 export class Comment {
-  @Field()
+  @Field(() => Int)
   @PrimaryGeneratedColumn("increment")
-  id!: string;
+  id!: int;
 
   @Field()
   @Column()
