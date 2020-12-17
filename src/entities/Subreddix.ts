@@ -28,7 +28,7 @@ export class Subreddix {
   name!: string;
 
   @Field()
-  @Column({ comment: "This is how new members come to understand your community" })
+  @Column({ comment: "This is how new members come to understand your community", default: '' })
   description!: string;
   
   @Field()
