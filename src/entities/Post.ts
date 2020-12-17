@@ -10,6 +10,7 @@ import {
 } from "typeorm";
 import { User } from "./User";
 import { Vote } from "./Vote";
+import { Comment } from './Comment';
 import { PostType } from "../types";
 // import { Flair } from "./Flair";
 
@@ -88,6 +89,9 @@ export class Post {
   @Field(() => User)
   @ManyToOne(() => User, (user) => user.posts)
   owner: User;
+
+  @OneToMany(() => Comment, (comment) => comment.post)
+  comments: Comment[];  
 
   // relationship with Vote
   @OneToMany(() => Vote, (v) => v.post)

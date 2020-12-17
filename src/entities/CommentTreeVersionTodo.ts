@@ -1,21 +1,16 @@
 import { ObjectType, Field } from "type-graphql";
 import { 
   ManyToOne,
-  Entity, Column, PrimaryGeneratedColumn } from "typeorm";
+  Entity, Column, PrimaryGeneratedColumn, 
+  Tree, 
+  TreeChildren, 
+  TreeLevelColumn, 
+  TreeParent } from "typeorm";
 import { User } from "./User";
 import { Post } from './Post';
 
-/**
- * for now I go with simple commenting system, where there is hierarchy of comments,
- * but users can reply to other comments, for example, when they click `reply` button 
- * which is located on the bottom of comment component (UI) , new comment window will
- * opened with mentions symbol followed by person who wanted to reply: @user23
- * 
- * or one wants to comment using rich editor component they can also use @ mentions symbol,
- * when they type @ into rich textbox list of users who already commented will appear 
- */
-
 @ObjectType()
+@Tree("closure-table")
 @Entity({ name: 'comments' })
 export class Comment {
   @Field()
@@ -45,4 +40,13 @@ export class Comment {
   @Field()
   @Column({ type: "uuid" })
   postId!: string;
+
+  @TreeChildren()
+  children: Comment[];
+
+  @TreeParent()
+  parent: Comment;
+
+  @TreeLevelColumn()
+  level: number;
 }
