@@ -1,3 +1,4 @@
+
 import argon2 from "argon2";
 import { ObjectType, Field } from "type-graphql";
 import {
@@ -12,6 +13,7 @@ import {
 } from "typeorm";
 import { IsEmail } from 'class-validator'
 import { Post } from "./Post";
+import { Comment } from './Comment';
 import { Subreddix } from "./Subreddix";
 import { Vote } from "./Vote";
 
@@ -47,12 +49,21 @@ export class User {
     
   // relationship with Post
   @OneToMany(() => Post, (post) => post.owner)
-  posts: Post[];
+  posts: Post[];  
+
+  // relationship with Comment
+  @OneToMany(() => Comment, (comment) => comment.owner)
+  comments: Comment[];
 
   // relationship with Vote
   @Field(()=> [Vote])
   @OneToMany(() => Vote, (v) => v.user)
   votes: Vote[]
+
+  // relationship with Point
+  // @Field(()=> [Comment])
+  // @OneToMany(() => Comment, (c) => c.user)
+  // points: Point[]
 
   /**
    * --------------------------------------------
@@ -92,6 +103,10 @@ export class User {
   @Field()
   @Column({ default: false })
   isActive: boolean;
+
+  @Field()
+  @Column({ default: false })
+  isVerified: boolean;
 
   static async verifyPassword(real: string, toCheck: string): Promise<boolean | undefined>  { 
     let bool: boolean | undefined;

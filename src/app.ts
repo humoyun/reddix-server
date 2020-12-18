@@ -14,6 +14,7 @@ import cors from 'cors'
 import { SubreddixResolver } from "./resolvers/subreddix";
 import { UserResolver } from './resolvers/user';
 import { PostResolver } from './resolvers/post';
+import { CommentResolver } from "./resolvers/comment";
 import typeORMConfig from './type-orm.config';
 
 import { IS_PROD, COOKIE_NAME, ORIGIN } from './constants';
@@ -21,7 +22,11 @@ import { PostgresConnectionOptions } from "typeorm/driver/postgres/PostgresConne
 
 import { voteLoader } from './utils/voteLoader'
 
-console.log("IS_PROD" , IS_PROD)
+console.log("*****************************************")
+console.log("************ REDDIX started *************")
+console.log(`********** is_prod: ${IS_PROD} **********`)
+console.log("*****************************************")
+
 
 const ONE_WEEK = 1000 * 3600 * 24 * 7;
 
@@ -73,7 +78,7 @@ const main = async () => {
 
   const apollo = new ApolloServer({
     schema: await buildSchema({
-      resolvers: [PostResolver, UserResolver, SubreddixResolver],
+      resolvers: [PostResolver, UserResolver, SubreddixResolver, CommentResolver],
       validate: false
     }),
     context: ({req, res}) => ({ 

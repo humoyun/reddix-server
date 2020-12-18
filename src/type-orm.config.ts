@@ -3,6 +3,7 @@ import path from "path";
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { IS_PROD, DB_CONFIG } from "./constants";
 import { Post } from "./entities/Post";
+import { Comment } from "./entities/Comment";
 import { Vote } from "./entities/Vote";
 import { Subreddix } from "./entities/Subreddix";
 import { User } from "./entities/User";
@@ -20,7 +21,7 @@ export default {
     synchronize: !IS_PROD,
     logging: !IS_PROD,
     migrations: [path.join(__dirname, "/migrations/dev/*")],
-    entities: [User, Post, Vote, Subreddix],
+    entities: [User, Post, Vote, Subreddix, Comment],
     namingStrategy: new SnakeNamingStrategy()
   },
   

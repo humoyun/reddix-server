@@ -31,7 +31,7 @@ export class SubreddixResolver {
     const ownerId = ctx.req.session.userId
     
     const slug = slugify(name)
-    const repo = getRepository(Subreddix)
+    
 
     const subreddix = await repo.findOne({ slug })
     if (subreddix) {
@@ -44,6 +44,8 @@ export class SubreddixResolver {
 
     const uRepo = getRepository(User)
     const user = await uRepo.findOne({id: ownerId})
+    const repo = getRepository(Subreddix)
+
     console.log("createSubreddix:", user)
 
     const resp = await repo.save({
@@ -68,13 +70,14 @@ export class SubreddixResolver {
     if (!resp) { 
       return {
         errors: ['some issue'],
-        data: null
+        data: undefined
       }
     }
     
     const convertedTopics = resp.topics.match(/[\w.-]+/g).map(String)
     return {
-      data: {...resp, topics: convertedTopics}
+      data: {...resp, topics: convertedTopics},
+      errors: null
     }
   }
 
