@@ -21,6 +21,7 @@ import { IS_PROD, COOKIE_NAME, ORIGIN } from './constants';
 import { PostgresConnectionOptions } from "typeorm/driver/postgres/PostgresConnectionOptions";
 
 import { voteLoader } from './utils/voteLoader'
+import { myAuthChecker } from "./middlewares/hasPermission";
 
 console.log("*****************************************")
 console.log("************ REDDIX started *************")
@@ -32,21 +33,21 @@ const ONE_WEEK = 1000 * 3600 * 24 * 7;
 
 const main = async () => {
   const PORT = 4400;
-  
+
   /**
    * Generally, you must create connection only once in your application bootstrap, 
    * and close it after you completely finished working with the database. In practice, 
    * if you are building a backend for your site and your backend server 
    * always stays running - you never close a connection.
    */
-    
-   const options = IS_PROD ? typeORMConfig.prod : typeORMConfig.dev
-   // const connection =
-   await createConnection(options as PostgresConnectionOptions);
+
+  const options = IS_PROD ? typeORMConfig.prod : typeORMConfig.dev
+  // const connection =
+  await createConnection(options as PostgresConnectionOptions);
 
   // when you need to do migrations
   // await connection.runMigrations()
-  
+
   const app = express();
   const RedisStore = connectRedis(session)
   const redis = new Redis();
@@ -74,16 +75,17 @@ const main = async () => {
       secret: process.env.SECRET_KEY as string,
       resave: false,
     })
-  );  
+  );
 
   const apollo = new ApolloServer({
     schema: await buildSchema({
       resolvers: [PostResolver, UserResolver, SubreddixResolver, CommentResolver],
+      authChecker: myAuthChecker,
       validate: false
     }),
-    context: ({req, res}) => ({ 
-      redis, 
-      req, 
+    context: ({ req, res }) => ({
+      redis,
+      req,
       res,
       voteLoader: voteLoader()
     }),
@@ -95,14 +97,14 @@ const main = async () => {
   })
 
   // defaults to cors: { origin: "*" }
-  apollo.applyMiddleware({ 
-    app, 
+  apollo.applyMiddleware({
+    app,
     cors: false
   });
 
-  app.listen(PORT, ()=> {
+  app.listen(PORT, () => {
     console.log(`Reddix Server started at port: ${PORT}`)
-  })  
+  })
 }
 
 /**

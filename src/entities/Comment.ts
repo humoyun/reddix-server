@@ -26,7 +26,7 @@ import { Post } from './Post';
 export class Comment {
   @Field(() => Int)
   @PrimaryGeneratedColumn("increment")
-  id!: int;
+  id!: number;
   
   @Index()
   @Field()

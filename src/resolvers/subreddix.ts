@@ -1,39 +1,55 @@
 import { MyContext, SubreddixType } from "../types";
-import { Arg, Ctx, Field, Mutation, ObjectType, Query, Resolver, UseMiddleware } from "type-graphql";
+import { Query, Resolver, Mutation, Arg, Ctx, Field, ObjectType, InputType, UseMiddleware } from "type-graphql";
 import { Subreddix } from "../entities/Subreddix";
 import { slugify } from "../utils/common";
 import { getConnection, getCustomRepository, getRepository } from "typeorm";
 import { User } from "../entities/User";
 import { SubreddixRepository } from "../repositories/SubreddixRepository";
 import { isAuth } from "../middlewares/isAuth";
+import { type } from "os";
 
 @ObjectType()
-export class SubreddixResponse { 
+export class SubreddixResponse {
   @Field(() => [String], { nullable: true })
-  errors?: string[]
+  errors?: string[] | null
 
   @Field(() => Subreddix, { nullable: true })
-  data?: Subreddix
+  data?: Subreddix | null
 }
-  
+
+@InputType()
+class SubreddixInput {
+  @Field()
+  name!: string;
+
+  @Field()
+  type!: SubreddixType;
+
+  @Field()
+  description!: string;
+
+  @Field(() => [String])
+  topics!: Array<string>;
+}
+
+
 @Resolver(Subreddix)
 export class SubreddixResolver {
-  
-  @Mutation(() => SubreddixResponse)
-  @UseMiddleware(isAuth) 
-  async createSubreddix(
-    @Arg("name") name: string,
-    @Arg("type") type: SubreddixType,
-    @Arg("description") description: string,
-    @Arg("topics", () => [String]) topics: Array<string>,
-    @Ctx() ctx: MyContext
-  ): Promise<SubreddixResponse> { 
-    const ownerId = ctx.req.session.userId
-    
-    const slug = slugify(name)
-    
 
-    const subreddix = await repo.findOne({ slug })
+  // TODO: validation and permission guards
+  @Mutation(() => SubreddixResponse)
+  @UseMiddleware(isAuth)
+  async createSubreddix(
+    @Arg("input") input: SubreddixInput,
+    @Ctx() ctx: MyContext
+  ): Promise<SubreddixResponse> {
+    const ownerId = ctx.req.session.userId
+
+    const slug = slugify(input.name)
+
+    const repo = getRepository(Subreddix)
+
+    const subreddix = await repo.findOne({ slug }) as Subreddix
     if (subreddix) {
       console.log("subreddix ", subreddix)
       return {
@@ -41,22 +57,29 @@ export class SubreddixResolver {
         data: undefined
       }
     }
+    let result: any;
 
-    const uRepo = getRepository(User)
-    const user = await uRepo.findOne({id: ownerId})
-    const repo = getRepository(Subreddix)
-
-    console.log("createSubreddix:", user)
-
-    const resp = await repo.save({
-      name,
-      type,
-      description,
-      topics,
+    // flairs and topics types has some issues with postgres types
+    // cannot cast Array<string> or [string] in Subreddix Entity class
+    // so as any was used
+    const payload: Partial<Subreddix> = {
+      name: input.name,
+      type: input.type,
+      description: input.description,
+      topics: input.topics as any,
+      flairs: [] as any,
       slug,
-      owner: user
-    }) // save({relations: ["owner"]})
- // save({relations: ["owner"]})
+      ownerId
+    }
+
+    try {
+      result = await repo.save(payload) as Subreddix
+
+    } catch (err) {
+      console.error(err)
+    }
+    // save({relations: ["owner"]})
+    // save({relations: ["owner"]})
 
     // await getConnection()
     // .createQueryBuilder()
@@ -67,16 +90,21 @@ export class SubreddixResolver {
     //   ])
     // .execute();
 
-    if (!resp) { 
+    // handle potential issues
+    if (!result) {
       return {
         errors: ['some issue'],
         data: undefined
       }
     }
-    
-    const convertedTopics = resp.topics.match(/[\w.-]+/g).map(String)
+
+    let convertedTopics = result?.topics;
+    if (result && typeof result.topics === 'string') {
+      convertedTopics = result?.topics.match(/[\w.-]+/g).map(String)
+    }
+
     return {
-      data: {...resp, topics: convertedTopics},
+      data: { ...result, topics: convertedTopics },
       errors: null
     }
   }
@@ -86,9 +114,10 @@ export class SubreddixResolver {
    * @param param0 
    */
   @Query(() => [Subreddix], { nullable: true })
-  async getSubreddixs(@Ctx() { req }: MyContext): Promise<Subreddix[]> {
+  async getSubreddixs(): Promise<Subreddix[]> {
     let result: Array<Subreddix> = [];
     const repo = getRepository(Subreddix)
+
     try {
       result = await repo.createQueryBuilder("s").
         innerJoinAndSelect("s.subreddixes", "members", "", []).getMany()
@@ -99,11 +128,30 @@ export class SubreddixResolver {
     return result
   }
 
+  /**
+   * Get all subreddixs which the user joined
+   * @param param0 
+   */
+  @Query(() => [Subreddix], { nullable: true })
+  async getSubreddixByUser(@Ctx() { req }: MyContext): Promise<Subreddix[]> {
+    let result: Array<Subreddix> = [];
+    const repo = getRepository(Subreddix)
+
+    try {
+      result = await repo.createQueryBuilder("s").
+        innerJoinAndSelect("s.subreddixes", "members", "WHERE owner_id = $1", [req.session.userId]).getMany()
+    } catch (err) {
+      console.error(err)
+    }
+
+    return result
+  }
+
   @Query(() => Subreddix, { nullable: true })
   async getSubreddix(
     @Arg("slug") slug: string,
-  ): Promise<Subreddix> { 
-    const repo = getCustomRepository(SubreddixRepository) 
+  ): Promise<Subreddix> {
+    const repo = getCustomRepository(SubreddixRepository)
     const resp = await repo.findOne(
       { where: { slug }, relations: ["owner", "members"] }
     ) as Subreddix
@@ -119,12 +167,12 @@ export class SubreddixResolver {
   async joinSubreddix(
     @Arg("join") join: boolean,
     @Arg("slug") slug: string,
-    @Ctx() { req }: MyContext): Promise<SubreddixResponse> { 
+    @Ctx() { req }: MyContext): Promise<SubreddixResponse> {
     let subreddix;
     try {
       const uRepo = getRepository(User)
       const srRepo = getRepository(Subreddix)
-      
+
       subreddix = await srRepo.findOne({ slug }, { relations: ["members"] });
       const user = await uRepo.findOne(req.session.userId)
       if (!user) {
@@ -136,33 +184,33 @@ export class SubreddixResolver {
       console.log("user", user)
       console.log("subreddix", subreddix)
       const isMember = subreddix?.members.find(m => m.id === user?.id)
-      
+
       if (isMember && join)
         return {
           errors: ["You are already joined this subreddix"],
         }
 
       const query = getConnection().createQueryBuilder().relation(Subreddix, "members").of(subreddix)
-      if (join) { 
+      if (join) {
         // subreddix!.members = [user]
         query.add(user)
       } else {
         query.remove(user)
         // subreddix!.members = subreddix!.members.filter(member => member.id !== user!.id)
       }
-      
+
     } catch (err) {
       console.error(err)
       return {
         errors: ["Server unhandled issue"],
       }
     }
-    
+
     return {
       errors: [],
       data: subreddix
     };
   }
 
-  async delete() {}
+  async delete() { }
 }

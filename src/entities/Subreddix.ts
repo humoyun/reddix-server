@@ -30,11 +30,11 @@ export class Subreddix {
   @Field()
   @Column({ comment: "This is how new members come to understand your community", default: '' })
   description!: string;
-  
+
   @Field()
   @Column({ unique: true })
   slug!: string;
-  
+
   // private | restricted | public
   @Field()
   @Column({ type: 'enum', enum: SubreddixType, default: SubreddixType.PUB })
@@ -46,11 +46,11 @@ export class Subreddix {
 
   @Field(() => [String])
   @Column("jsonb", { array: true, default: {} })
-  rules: string;
-  
+  rules?: string;
+
   @Field(() => [String])
   @Column({ array: true, default: {} })
-  flairs?: string;  
+  flairs?: string;
 
   @Field()
   @Column({ nullable: false, comment: "used for indicating who is the owner of this subreddix" })

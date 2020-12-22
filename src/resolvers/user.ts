@@ -6,7 +6,6 @@ import {
   Args,
   Arg,
   ObjectType,
-  InputType,
   ArgsType,
   Field,
   Int,

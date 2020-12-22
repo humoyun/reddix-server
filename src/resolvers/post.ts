@@ -1,4 +1,3 @@
-import { User } from './../entities/User';
 import {
   Resolver,
   Query,
@@ -28,7 +27,7 @@ interface CustomType {
 
 function isDateObject(date: any) {
   return Object.prototype.toString.call(date) === '[object Date]'
-} 
+}
 
 function isObject(obj: any) {
   return (typeof obj === "object" && obj !== null) || typeof obj === "function";
@@ -48,7 +47,7 @@ const formatter = (data: CustomType): object | undefined => {
       tmp = key;
       const index = tmp.indexOf("_");
       tmp = tmp.replace("_", "")
-      tmp = `${tmp.slice(0, index)}${tmp[index].toUpperCase()}${tmp.slice(index+1)}`
+      tmp = `${tmp.slice(0, index)}${tmp[index].toUpperCase()}${tmp.slice(index + 1)}`
       result[tmp] = data[key];
       delete result[key]
     } else {
@@ -63,8 +62,8 @@ const formatter = (data: CustomType): object | undefined => {
 class PostInput {
   @Field()
   title: string;
-    
-  @Field(type => PostType)
+
+  @Field(() => PostType)
   type!: PostType;
 
   @Field()
@@ -82,7 +81,7 @@ class PostResponse {
 }
 
 @ObjectType()
-class PaginatedPosts { 
+class PaginatedPosts {
   @Field(() => [Post])
   posts: Post[]
 
@@ -123,7 +122,7 @@ export class PostResolver {
 
     const vote = await voteLoader.load({ postId: post.id, userId: req.session.userId })
 
-    return vote ? vote.val : null 
+    return vote ? vote.val : null
   }
 
   @Query(() => PaginatedPosts)
@@ -158,7 +157,7 @@ export class PostResolver {
       ) AS owner
       FROM posts p
       INNER JOIN users u ON u.id = p.owner_id
-      ${cursor ? "WHERE p.created_at < $2" : "" }
+      ${cursor ? "WHERE p.created_at < $2" : ""}
       ORDER BY p.created_at DESC
       LIMIT $1
     `, parameters)
@@ -167,7 +166,7 @@ export class PostResolver {
     }
     // We need to format post properties as they are in snake_case, 
     // we should convert them into camelCase for GraphQL 
-    
+
     const formatted = posts.map((post: Post) => formatter(post))
 
     return {
@@ -183,7 +182,7 @@ export class PostResolver {
     const post = await getConnection().getRepository(Post).findOne(id, { relations: ["owner"] })
 
     return post
-  } 
+  }
 
   /**
    *
@@ -191,7 +190,7 @@ export class PostResolver {
    * @param ctx
    */
   @Mutation(() => PostResponse)
-  @UseMiddleware(isAuth) 
+  @UseMiddleware(isAuth)
   async createPost(
     @Arg("input") input: PostInput,
     @Ctx() ctx: MyContext
@@ -234,7 +233,7 @@ export class PostResolver {
       }
       payload.text = input.text;
     }
-    
+
     const resp = await repo.save(payload) as Post
 
     return {
@@ -248,7 +247,7 @@ export class PostResolver {
    * @param title
    */
   @Mutation(() => Post, { nullable: true })
-  @UseMiddleware(isAuth) 
+  @UseMiddleware(isAuth)
   async updatePost(
     @Arg("id") id: number,
     @Arg("title") title: string,
@@ -270,7 +269,7 @@ export class PostResolver {
     if (Object.keys(update).length > 0) {
       await repo.update(id, { ...update });
     }
-    // post title is old not udpated one,  so I am hacking little  bit, should find better way
+    // post title is old not updated one,  so I am hacking little  bit, should find better way
     return { ...post, ...update };
   }
 
@@ -280,10 +279,10 @@ export class PostResolver {
    */
   @Mutation(() => Boolean)
   @UseMiddleware(isAuth)
-  async deletePost(@Arg("id") id: string, @Ctx() ctx: MyContext): Promise<boolean> {
+  async deletePost(@Arg("id") id: string, @Ctx() { req }: MyContext): Promise<boolean> {
     const repo = getRepository(Post)
     try {
-      await repo.delete({ id, ownerId: ctx?.req.session.userId });
+      await repo.delete({ id, ownerId: req?.session.userId });
 
       // TODO: second way, I need to check which is more efficient
       // await getConnection().
@@ -296,7 +295,7 @@ export class PostResolver {
       console.error(err);
       return false;
     }
- 
+
     return true;
   }
 
@@ -310,7 +309,7 @@ export class PostResolver {
   async vote(
     @Arg('postId', () => String) postId: number,
     @Arg('val', () => Int) val: number,
-    @Ctx() {req}: MyContext
+    @Ctx() { req }: MyContext
   ) {
     const userId = req.session.userId
     const postRepo = getRepository(Post);
@@ -320,13 +319,13 @@ export class PostResolver {
       return {
         errors: [{
           field: 'user',
-          message: 'cannot vote one\'s vote' 
+          message: 'cannot vote one\'s vote'
         }],
         success: false
       }
     }
 
-    const queryRunner = getConnection().createQueryRunner() 
+    const queryRunner = getConnection().createQueryRunner()
     await queryRunner.connect()
 
     let results;
@@ -347,8 +346,8 @@ export class PostResolver {
     }
     console.log("********** results ", results)
     if (results.length > 0) {
-      const [vote] = results;      
-      const updateVal = vote.val+val
+      const [vote] = results;
+      const updateVal = vote.val + val
       await queryRunner.startTransaction()
       console.log("--------------------")
 
@@ -357,14 +356,14 @@ export class PostResolver {
           'UPDATE votes SET val = $1 WHERE post_id = $2 AND user_id = $3;',
           [updateVal, postId, userId]
         );
-        
+
         // otherwise it will keep updating points by one every time, because realVal is always 1 if val = 0
-        
+
         await queryRunner.query(
           'UPDATE posts SET points = points + $1 WHERE id = $2;',
           [val, postId]
         );
-        
+
         console.log("--------------------")
 
         await queryRunner.commitTransaction();
@@ -377,13 +376,13 @@ export class PostResolver {
             field: 'val',
             message: err.message
           }],
-          success: false              
+          success: false
         }
       } finally {
         // you need to release query runner which is manually created:
         await queryRunner.release();
       }
-    } else { 
+    } else {
       await queryRunner.startTransaction()
       // # one cannot vote his own post
       // # one cannot vote more than one unit
@@ -397,7 +396,7 @@ export class PostResolver {
           'UPDATE posts SET points = points + $1 WHERE id = $2;',
           [val, postId]
         );
-        
+
         await queryRunner.commitTransaction();
       } catch (err) {
         // since we have errors let's rollback changes we made

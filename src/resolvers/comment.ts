@@ -1,4 +1,4 @@
-import { Resolver, Query, Ctx, Arg, Int, Mutation, UseMiddleware, Field, ObjectType  } from "type-graphql";
+import { Resolver, Query, Ctx, Arg, Int, Mutation, UseMiddleware, Field, ObjectType, Authorized } from "type-graphql";
 import { Comment } from "../entities/Comment";
 import { FieldError, MyContext } from '../types'
 import { isAuth } from "../middlewares/isAuth";
@@ -10,15 +10,24 @@ import { getRepository } from "typeorm";
 @ObjectType()
 class CommentResponse {
   @Field(() => [FieldError], { nullable: true })
-  errors?: [FieldError]
+  errors?: [FieldError] | null
 
-  @Field(() => Comment, { nullable: true })
-  comment?: Comment
+  @Field(() => [FieldError], { nullable: true })
+  data?: Comment | null
+}
+
+@ObjectType()
+class ResourceDeleteResp {
+  @Field(() => [FieldError], { nullable: true })
+  errors?: [FieldError] | null
+
+  @Field(() => Boolean)
+  success: boolean
 }
 
 
 @ObjectType()
-class PaginatedComments { 
+class PaginatedComments {
   @Field(() => [Comment])
   comments: Comment[]
 
@@ -28,21 +37,20 @@ class PaginatedComments {
 
 @Resolver()
 export class CommentResolver {
-  
 
   @Query(() => PaginatedComments)
-  async getCommentsByUser(@Ctx() { req }: MyContext): Promise<PaginatedComments> { 
+  async getCommentsByUser(@Ctx() { req }: MyContext): Promise<PaginatedComments> {
     const commentRepo = getRepository(Comment)
     let result;
-    
+
     try {
-      result = await commentRepo.find({ ownerId: req.session.userid })
+      result = await commentRepo.find({ ownerId: req.session.userId })
     } catch (err) {
-      console.error(err)  
+      console.error(err)
     }
-    
+
     console.log("result ", result);
-    const comments = result?.map(com => ({ ...com, pointStatus: null }))
+    const comments = result?.map(comm => ({ ...comm, pointStatus: undefined }))
     console.log("PaginatedComments ", comments);
 
     return {
@@ -52,26 +60,24 @@ export class CommentResolver {
   }
 
   @Query(() => PaginatedComments)
-  async getCommentsByPost(@Arg('postId') postId: string,
-    @Ctx() { req }: MyContext): Promise<PaginatedComments> { 
+  async getCommentsByPost(@Arg('postId') postId: string): Promise<PaginatedComments> {
     const commentRepo = getRepository(Comment)
     let result;
-    
+
     try {
       result = await commentRepo.find({ postId })
     } catch (err) {
-      console.error(err)  
+      console.error(err)
     }
-    
-    console.log("result ", result);
-    const comments = result?.map(com => ({ ...com, pointStatus: null }))
-    console.log("PaginatedComments ", comments);
+
+    const comments = result?.map(com => ({ ...com, pointStatus: undefined }))
+
     return {
       comments: comments ? comments : [],
       hasMore: false
     }
   }
-  
+
 
   @Mutation(() => CommentResponse)
   @UseMiddleware(isAuth)
@@ -79,7 +85,7 @@ export class CommentResolver {
     @Arg('postId') postId: string,
     @Arg('text') text: string,
     @Ctx() { req }: MyContext): Promise<CommentResponse> {
-    
+
     const payload = {
       text,
       postId,
@@ -89,19 +95,48 @@ export class CommentResolver {
     const commentRepo = getRepository(Comment)
     let result;
     try {
-      result = await commentRepo.save(payload)
+      result = await commentRepo.save(payload) as Comment;
       console.log("createComment : ", result)
-      
+
     } catch (err) {
       console.error("createComment : ", err)
     }
 
     return {
       errors: null,
-      comment: {
+      data: {
         ...result,
-        pointStatus: null
+        pointStatus: undefined
       }
+    }
+  }
+
+  // TODO: permission 
+
+  @Mutation(() => ResourceDeleteResp)
+  @UseMiddleware(isAuth)
+  @Authorized()
+  async deleteComment(@Arg('id') id: number,
+    @Ctx() { req }: MyContext) {
+    const commentRepo = getRepository(Comment)
+
+    try {
+      await commentRepo.delete({ id, ownerId: req?.session.userId });
+    } catch (err) {
+      return {
+        errors: [
+          {
+            field: 'error field',
+            message: 'some error field message'
+          }
+        ],
+        success: false
+      }
+    }
+
+    return {
+      errors: null,
+      success: true
     }
   }
 }
