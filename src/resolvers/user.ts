@@ -277,10 +277,15 @@ export class UserResolver {
         ],
       };
     }
+
+    try {
+      await redis.del(key);
+    } catch (err) {
+      console.error("REDIS del error: ", err)  
+    }
+
     const password = await User.getHashedPassword(newPassword);
     await repo.update({ id: userId }, { password });
-
-    await redis.del(key);
 
     // clean everything, logout
     

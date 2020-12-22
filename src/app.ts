@@ -85,11 +85,13 @@ const main = async () => {
       redis, 
       req, 
       res,
-      voteLoader: voteLoader()
+      voteLoader: voteLoader() // solves N-1 problem in graphql
     }),
     playground: {
       settings: {
-        "request.credentials": "include"
+        "editor.theme": "dark",
+        "request.credentials": "include",
+        "tracing.hideTracingResponse": false
       }
     }
   })
