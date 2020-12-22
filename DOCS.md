@@ -21,3 +21,9 @@ https://stackoverflow.com/questions/2942485/psql-fatal-ident-authentication-fail
 
 # simple ts starter code
 https://github.com/stemmlerjs/simple-typescript-starter
+
+# access control for graphql (authorization)
+https://www.apollographql.com/blog/authorization-in-graphql-452b1c402a9
+
+# boilerplate 
+https://github.com/tajpouria/typegraphql-nextjs-boilerplate

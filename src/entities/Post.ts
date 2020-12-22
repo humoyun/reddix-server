@@ -74,9 +74,13 @@ export class Post {
   @Field(() => Int, { nullable: true })
   voteStatus: number | null;
 
-  // @Field()
-  // @Column()
-  // hiddenPosts?: number[]; // I need to think how to design this behavior, user should not see these posts
+  // I need to think how to design this behavior, user should not see these posts
+  // @Field() 
+  // isHidden?: boolean;
+  
+  // needs pivot table
+  // @Field() 
+  // isBookmarked?: boolean;
 
   @Field()
   @Column({ type: "int", default: 0 })

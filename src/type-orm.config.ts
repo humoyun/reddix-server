@@ -2,11 +2,16 @@ import path from "path";
 
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { IS_PROD, DB_CONFIG } from "./constants";
+import { User } from "./entities/User";
+import { Subreddix } from "./entities/Subreddix";
 import { Post } from "./entities/Post";
 import { Comment } from "./entities/Comment";
 import { Vote } from "./entities/Vote";
-import { Subreddix } from "./entities/Subreddix";
-import { User } from "./entities/User";
+
+// not included yet
+import { Point } from "./entities/Point";
+import { Membership } from "./entities/Membership";
+import { Bookmark } from "./entities/Bookmark";
 
 export default {
   dev: {

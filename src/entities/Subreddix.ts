@@ -35,7 +35,13 @@ export class Subreddix {
   @Column({ unique: true })
   slug!: string;
 
-  // private | restricted | public
+  /**
+   * We need to make Access Control mechanism to control permissions on subreddix 
+   * 
+   * Public: { anyone can see and participate in your community }
+   * Restricted: { anyone can see, join, or vote in your community, but you control who posts and comments }
+   * Private: { only people you approve can see and participate in your community }
+   */
   @Field()
   @Column({ type: 'enum', enum: SubreddixType, default: SubreddixType.PUB })
   type!: SubreddixType;

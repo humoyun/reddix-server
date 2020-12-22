@@ -35,7 +35,7 @@ export class User {
   @Field()
   @Column({ default: false })
   verified: boolean;
-
+  
   @Column()
   password!: string;
 
